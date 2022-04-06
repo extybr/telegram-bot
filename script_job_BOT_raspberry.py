@@ -4,7 +4,7 @@ import telebot
 from loguru import logger
 from telebot import types
 import RPi.GPIO as GPIO
-from script_job_raspberry import extract_jobs
+from script_job_raspberry import search_jobs
 
 URL = 'https://www.cbr-xml-daily.ru/latest.js'
 HEADERS = {'Host': 'https://www.cbr-xml-daily.ru', 'User-Agent': 'Mozilla/5.0', 'Accept': '*/*',
@@ -13,9 +13,10 @@ HEADERS = {'Host': 'https://www.cbr-xml-daily.ru', 'User-Agent': 'Mozilla/5.0', 
 token = 'bla-bla-bla'  # полученный токен бота
 bot = telebot.TeleBot(token)
 bot.remove_webhook()
-# (332458533, 558054155) id telegram ниже в коде изменены
+# USER_X - id telegram ниже в коде изменены
 USER_1 = 332458533
 USER_2 = 558054155
+USER_3 = 778054177
 
 GPIO.setwarnings(False)
 GPIO.setmode(GPIO.BCM)
@@ -32,7 +33,7 @@ def start(message) -> None:
     logger.info(message.chat.id)
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     button_1 = types.KeyboardButton('💲 USD - EUR 💲')
-    button_2 = types.KeyboardButton('🐷 Жеребцу 🐷')
+    button_2 = types.KeyboardButton('🐷 Водички? 🐷')
     button_3 = types.KeyboardButton('🙏 работа 🙏')
     button_4 = types.KeyboardButton('🚷 stop 🚷')
     button_5 = types.KeyboardButton('😎 read file 😎')
@@ -66,7 +67,7 @@ def message_reply(message) -> None:
         except OSError:
             print('Сервер недоступен')
             bot.send_message(message.chat.id, 'Сервер недоступен')
-    elif message.text == "🐷 Жеребцу 🐷":
+    elif message.text == "🐷 Водички? 🐷":
         url_img = ("https://bestwine24.ru/image/cache/catalog/vodka"
                    "/eef2e315f762519e75aba64a800b63e9-540x720.jpg")
         bot.send_photo(message.chat.id, photo=url_img)
@@ -100,13 +101,14 @@ def message_reply(message) -> None:
         else:
             bot.send_message(message.chat.id, 'Вам запрещено выключать бота 😄')
     elif message.text == "🙏 работа 🙏":
-        text = '_vacancies.txt'  # путь к файлу и имя файла
         if message.chat.id in (USER_1, USER_2):
-            extract_jobs()
+            search_jobs(message.chat.id, '96', '', '22', '1')
+        elif message.chat.id == USER_3:
+            search_jobs(message.chat.id, '', 'графический дизайнер', '22', '30')
         else:
-            from script_job_another import jobs
-            jobs()
+            search_jobs(message.chat.id, '', '70000', '1979', '1')
         count = 0
+        text = f'vacancies/{message.chat.id}.txt'  # путь к файлу и имя файла
         with open(text, 'r', encoding='utf-8') as txt:
             count += int(txt.readline().strip()[20:])
         if count > 10:
@@ -121,7 +123,7 @@ def message_reply(message) -> None:
 
 def send_vacancies(message) -> None:
     """ Читает локальный файл с вакансиями """
-    text = '_vacancies.txt'  # путь к файлу и имя файла
+    text = f'vacancies/{message.chat.id}.txt'  # путь к файлу и имя файла
     count = 0
     count_local = 0
     with open(text, 'r', encoding='utf-8') as txt:
@@ -132,9 +134,9 @@ def send_vacancies(message) -> None:
         bot.send_message(message.chat.id, f'Всего вакансий за сутки: {count}. В локальной базе: '
                                           f'{count_local}. Удаленных вакансий-спама: {count_spam}.')
     else:
-        bot.send_message(message.chat.id, f'Число вакансий за сутки: {count_local}\nБудут показаны'
+        bot.send_message(message.chat.id, f'Число вакансий за сутки:  {count_local}\nБудут показаны'
                                           f' вакансии опубликованные за сутки с зарплатой не менее '
-                                          f'70тыс.рублей\nПовторы и спам ({count_spam}шт.) будут '
+                                          f'70тыс. рублей\nПовторы и спам ({count_spam}шт.) будут '
                                           f'проигнорированы.')
     sleep(3)
     if count > 0:

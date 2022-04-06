@@ -22,7 +22,7 @@ GPIO.setwarnings(False)
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(25, GPIO.OUT)
 
-COMMAND = ['💲 USD - EUR 💲', '🐷 Жеребцу 🐷', '🙏 работа 🙏', '🚷 stop 🚷', '😎 read file 😎',
+COMMAND = ['💲 USD - EUR 💲', '🐷 Водички? 🐷', '🙏 работа 🙏', '🚷 stop 🚷', '😎 read file 😎',
            '🌼 led on 🌼', '🌼 led off 🌼', '🤓 мой id 🤓']
 
 

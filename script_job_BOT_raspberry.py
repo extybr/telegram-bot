@@ -17,13 +17,10 @@ bot.remove_webhook()
 USER_1 = 332458533
 USER_2 = 558054155
 USER_3 = 778054177
-
+NEW = dict()
 GPIO.setwarnings(False)
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(25, GPIO.OUT)
-
-COMMAND = ['💲 USD - EUR 💲', '🐷 Водички? 🐷', '🙏 работа 🙏', '🚷 stop 🚷', '😎 read file 😎',
-           '🌼 led on 🌼', '🌼 led off 🌼', '🤓 мой id 🤓']
 
 
 @bot.message_handler(commands=['start'])
@@ -35,13 +32,14 @@ def start(message) -> None:
     button_1 = types.KeyboardButton('💲 USD - EUR 💲')
     button_2 = types.KeyboardButton('🐷 Водички? 🐷')
     button_3 = types.KeyboardButton('🙏 работа 🙏')
-    button_4 = types.KeyboardButton('🚷 stop 🚷')
+    button_4 = types.KeyboardButton('🚷 bot_stop 🚷')
     button_5 = types.KeyboardButton('😎 read file 😎')
     button_6 = types.KeyboardButton('🌼 led on 🌼')
     button_7 = types.KeyboardButton('🌼 led off 🌼')
     button_8 = types.KeyboardButton('🤓 мой id 🤓')
-    markup.row(button_1, button_2, button_3, button_8)
-    markup.row(button_5, button_6, button_7, button_4)
+    button_9 = types.KeyboardButton('🚷 stop 🚷')
+    markup.row(button_1, button_3, button_9, button_8)
+    markup.row(button_2, button_5, button_6, button_7, button_4)
     bot.send_message(message.chat.id, 'Ну что готов к поиску работы? 😄 Жми кнопки-команды внизу',
                      reply_markup=markup)
     url = 'https://skyteach.ru/wp-content/cache/thumb/d7/81a695a40a5dfd7_730x420.jpg'
@@ -91,7 +89,7 @@ def message_reply(message) -> None:
     elif message.text == "🤓 мой id 🤓":
         bot.send_message(message.chat.id, f'id - {message.chat.id}\nИмя - {message.chat.first_name}'
                                           f'\nПользователь - {message.chat.username}')
-    elif message.text == "🚷 stop 🚷":
+    elif message.text == "🚷 bot_stop 🚷":
         if message.chat.id == USER_1:
             try:
                 # bot.stop_polling()
@@ -106,7 +104,7 @@ def message_reply(message) -> None:
         elif message.chat.id == USER_3:
             search_jobs(message.chat.id, '', 'графический дизайнер', '22', '30')
         else:
-            search_jobs(message.chat.id, '', '70000', '1979', '1')
+            search_jobs(message.chat.id, '', '', '1979', '1')
         count = 0
         text = f'vacancies/{message.chat.id}.txt'  # путь к файлу и имя файла
         with open(text, 'r', encoding='utf-8') as txt:
@@ -116,7 +114,10 @@ def message_reply(message) -> None:
         else:
             with open(text, 'r', encoding='utf-8') as txt:
                 bot.send_message(message.chat.id, f'{txt.read()}')
-    elif message.text not in COMMAND:
+    elif message.text == '🚷 stop 🚷':
+        global NEW
+        NEW[f'{message.chat.id}'] = 1
+    else:
         bot.send_message(message.chat.id, f'Не надо баловаться 😡 {message.chat.first_name}\n\n'
                                           f'😜 И тебе того же:   {message.text}')
 
@@ -133,16 +134,23 @@ def send_vacancies(message) -> None:
     if message.chat.id in (USER_1, USER_2):
         bot.send_message(message.chat.id, f'Всего вакансий за сутки: {count}. В локальной базе: '
                                           f'{count_local}. Удаленных вакансий-спама: {count_spam}.')
+    elif message.chat.id == USER_3:
+        bot.send_message(message.chat.id, f'Число вакансий:  {count_local}')
     else:
         bot.send_message(message.chat.id, f'Число вакансий за сутки:  {count_local}\nБудут показаны'
                                           f' вакансии опубликованные за сутки с зарплатой не менее '
                                           f'70тыс. рублей\nПовторы и спам ({count_spam}шт.) будут '
                                           f'проигнорированы.')
     sleep(3)
+    global NEW
+    NEW[f'{message.chat.id}'] = 0
     if count > 0:
         with open(text, 'r', encoding='utf-8') as txt:
             for i, line in enumerate(txt.readlines()):
-                if len(line) < 3:
+                if NEW[f'{message.chat.id}'] == 1:
+                    bot.send_message(message.chat.id, 'Принудительная остановка вывода вакансий')
+                    break
+                elif len(line) < 3:
                     continue
                 elif line.count('*') > 2:
                     bot.send_message(message.chat.id, line.strip())
@@ -150,14 +158,17 @@ def send_vacancies(message) -> None:
                     bot.send_message(message.chat.id, line.strip())
                 elif line.startswith('🚘'):
                     sleep(5)
+    NEW[f'{message.chat.id}'] = 0
+    print(NEW)
 
 
 if __name__ == '__main__':
     while True:
         try:
-            bot.polling()
+            bot.polling(none_stop=True)
         except BaseException as error:
             print(error)
-            sleep(60)
+            sleep(30)
+            continue
         finally:
             GPIO.cleanup()

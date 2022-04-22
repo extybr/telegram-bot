@@ -6,10 +6,6 @@ from telebot import types
 import RPi.GPIO as GPIO
 from script_job_raspberry import search_jobs
 
-URL = 'https://www.cbr-xml-daily.ru/latest.js'
-HEADERS = {'Host': 'https://www.cbr-xml-daily.ru', 'User-Agent': 'Mozilla/5.0', 'Accept': '*/*',
-           'Accept-Encoding': 'gzip, deflate, br', 'Connection': 'keep-alive'}
-
 token = 'bla-bla-bla'  # полученный токен бота
 bot = telebot.TeleBot(token)
 bot.remove_webhook()
@@ -58,10 +54,20 @@ def message_reply(message) -> None:
     if message.text == '💲 USD - EUR 💲':
         # bot.send_message(message.chat.id, "https://cbr.ru/key-indicators/")
         try:
-            result = requests.get(URL, HEADERS).json()
-            result_1 = round(1 / result["rates"]['USD'], 3)
-            result_2 = round(1 / result["rates"]['EUR'], 3)
-            bot.send_message(message.chat.id, f'USD - {str(result_1)} / EUR - {str(result_2)}')
+            binance = requests.get('https://api.binance.com/api/v1/ticker/24hr').json()
+            price_btc, price_eth = 0, 0
+            for coin in binance:
+                if coin['symbol'] == 'BTCUSDT':
+                    price_btc = int(float(coin.get('lastPrice', 0)))
+                elif coin['symbol'] == 'ETHUSDT':
+                    price_eth = int(float(coin.get('lastPrice', 0)))
+            result_binance = f'BTCUSDT - {price_btc}  /  ETHUSDT - {price_eth}'
+            bank = requests.get('https://www.cbr-xml-daily.ru/latest.js').json()
+            bank_1 = round(1 / bank["rates"]['USD'], 3)
+            bank_2 = round(1 / bank["rates"]['EUR'], 3)
+            result_bank = f'USD - {bank_1}  /  EUR - {bank_2}'
+            bot.send_message(message.chat.id,
+                             f'Центробанк РФ:   {result_bank}\nБиржа Binance:   {result_binance}')
         except OSError:
             print('Сервер недоступен')
             bot.send_message(message.chat.id, 'Сервер недоступен')
@@ -87,15 +93,17 @@ def message_reply(message) -> None:
         else:
             bot.send_message(message.chat.id, 'Вам запрещено выключать чайник 😄')
     elif message.text == "🤓 мой id 🤓":
-        bot.send_message(message.chat.id, f'id - {message.chat.id}\nИмя - {message.chat.first_name}'
+        bot.send_message(message.chat.id, f'id - {message.chat.id}\nИмя - '
+                                          f'{message.from_user.full_name}'
                                           f'\nПользователь - {message.chat.username}')
     elif message.text == "🚷 bot_stop 🚷":
         if message.chat.id == USER_1:
+            bot.send_message(message.chat.id, 'Выключение бота 😄')
             try:
                 # bot.stop_polling()
                 bot.stop_bot()
             except RuntimeError:
-                print('finish')
+                print('Выключение бота')
         else:
             bot.send_message(message.chat.id, 'Вам запрещено выключать бота 😄')
     elif message.text == "🙏 работа 🙏":
@@ -146,7 +154,7 @@ def send_vacancies(message) -> None:
     NEW[f'{message.chat.id}'] = 0
     if count > 0:
         with open(text, 'r', encoding='utf-8') as txt:
-            for i, line in enumerate(txt.readlines()):
+            for line in txt.readlines():
                 if NEW[f'{message.chat.id}'] == 1:
                     bot.send_message(message.chat.id, 'Принудительная остановка вывода вакансий')
                     break
@@ -162,13 +170,18 @@ def send_vacancies(message) -> None:
     print(NEW)
 
 
-if __name__ == '__main__':
+@logger.catch
+def telegram_bot():
     while True:
         try:
             bot.polling(none_stop=True)
         except BaseException as error:
-            print(error)
+            logger.error(error)
             sleep(30)
             continue
         finally:
             GPIO.cleanup()
+
+
+if __name__ == '__main__':
+    telegram_bot()

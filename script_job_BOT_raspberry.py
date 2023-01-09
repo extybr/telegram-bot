@@ -65,6 +65,8 @@ def message_reply(message) -> None:
     if message.text.startswith('*'):
         hr = message.text.split(' ')
         profession = ''
+        if hr[0] or hr[1] in ['Республика', 'республика', 'край', 'область']:
+            hr[0] = hr[0] + ' ' + hr.pop(1)
         for i in hr:
             if i == hr[0]:
                 continue

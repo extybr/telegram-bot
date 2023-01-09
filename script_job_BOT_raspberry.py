@@ -87,7 +87,7 @@ async def text_message(message: types.Message):
             if os.path.exists(f'vacancies/{message.chat.id}.txt'):
                 download_file = open(f'vacancies/{message.chat.id}.txt', 'rb')
                 await bot.send_document(message.chat.id, download_file)
-    elif message.text.startswith('@'):
+    elif message.text.startswith('#'):
         import shlex
         import subprocess
         command = message.text[1:]
@@ -197,7 +197,8 @@ async def text_message(message: types.Message):
     elif message.text == '🚷 stop 🚷':
         global NEW
         NEW[f'{message.chat.id}'] = 1
-    elif message.text.startswith == 'https://youtu.be/' or 'https://www.youtube.com/':
+    elif [i for i in ['https://youtu.be/', 'https://www.youtu.be/', 'https://www.youtube.com/',
+                      'https://youtube.com/'] if message.text.startswith(i)]:
         yt = YouTube(message.text)
         await bot.send_message(message.chat.id, f'*Начинаю загрузку видео*: *{yt.title}*\n'
                                                 f'*С канала*: [{yt.author}]({yt.channel_url})',

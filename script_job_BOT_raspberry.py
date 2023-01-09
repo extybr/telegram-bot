@@ -2,32 +2,25 @@
 import os.path
 from time import sleep
 import requests
-import telebot
+from aiogram import *
+from aiogram.utils.exceptions import NetworkError
+from pytube import YouTube
 from loguru import logger
-from telebot import types
 import RPi.GPIO as GPIO
+from config import *
 from script_job_raspberry import search_jobs, region_id
 
-token = 'bla-bla-bla'  # полученный токен бота
-bot = telebot.TeleBot(token)
-bot.remove_webhook()
-
-USER_1 = 100000001
-USER_2 = 100000002
-USER_3 = 100000003
-USER_4 = 100000004
-USER_5 = 100000005
-USER_6 = 100000006
+bot = Bot(TOKEN)
+dp = Dispatcher(bot)
 NEW = dict()
 GPIO.setwarnings(False)
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(25, GPIO.OUT)
 
 
-@bot.message_handler(commands=['start'])
-def start(message) -> None:
+@dp.message_handler(commands=['start'])
+async def start_message(message: types.Message):
     """ Функция вывода при старте: определение кнопок, приветствие """
-    bot.clear_step_handler(message)
     logger.info(message.chat.id)
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     button_1 = types.KeyboardButton('💲 USD - EUR 💲')
@@ -41,20 +34,20 @@ def start(message) -> None:
     button_9 = types.KeyboardButton('🚷 stop 🚷')
     markup.row(button_1, button_3, button_9, button_8)
     markup.row(button_2, button_5, button_6, button_7, button_4)
-    bot.send_message(message.chat.id, 'Ну что готов к поиску работы? 😄 Жми кнопки-команды внизу',
-                     reply_markup=markup)
+    await bot.send_message(message.chat.id, 'Ну что готов к поиску работы? 😄 Жми кнопки-команды '
+                                            'внизу', reply_markup=markup)
     try:
         url = 'https://skyteach.ru/wp-content/cache/thumb/d7/81a695a40a5dfd7_730x420.jpg'
-        bot.send_photo(message.chat.id, photo=url, reply_markup=markup)
+        await bot.send_photo(message.chat.id, photo=url, reply_markup=markup)
     except Exception as er:
         logger.info(er)
         if str(er).find('Error code: 400'):
             img_file = open(f'vacancies/job.jpg', 'rb')
-            bot.send_document(message.chat.id, img_file)
+            await bot.send_document(message.chat.id, img_file)
 
 
-@bot.message_handler(content_types='text')
-def message_reply(message) -> None:
+@dp.message_handler()
+async def text_message(message: types.Message):
     """
     Функция, обрабатывает нажатие кнопок бота
     Логирование в терминал
@@ -65,6 +58,8 @@ def message_reply(message) -> None:
     if message.text.startswith('*'):
         hr = message.text.split(' ')
         profession = ''
+        if (hr[0] or hr[1]) in ['Республика', 'республика', 'край', 'область']:
+            hr[0] = hr[0] + ' ' + hr.pop(1)
         for i in hr:
             if i == hr[0]:
                 continue
@@ -75,9 +70,9 @@ def message_reply(message) -> None:
         region = region_id(hr[0][1:])
         days = hr[len(hr) - 1]
         if region is None:
-            bot.send_message(message.chat.id, 'Вы неправильно ввели название города')
+            await bot.send_message(message.chat.id, 'Вы неправильно ввели название города')
         elif len(days) != 2:
-            bot.send_message(message.chat.id, 'Вы неправильно ввели дату для поиска')
+            await bot.send_message(message.chat.id, 'Вы неправильно ввели дату для поиска')
         else:
             search_jobs(message.chat.id, '', f'{profession}', f'{region}', f'{days}')
             count = 0
@@ -85,13 +80,13 @@ def message_reply(message) -> None:
             with open(text, 'r', encoding='utf-8') as txt:
                 count += int(txt.readline().strip()[20:])
             if count > 10:
-                send_vacancies(message)
+                await send_vacancies(message)
             else:
                 with open(text, 'r', encoding='utf-8') as txt:
-                    bot.send_message(message.chat.id, f'{txt.read()}')
+                    await bot.send_message(message.chat.id, f'{txt.read()}')
             if os.path.exists(f'vacancies/{message.chat.id}.txt'):
                 download_file = open(f'vacancies/{message.chat.id}.txt', 'rb')
-                bot.send_document(message.chat.id, download_file)
+                await bot.send_document(message.chat.id, download_file)
     elif message.text.startswith('@'):
         import shlex
         import subprocess
@@ -100,10 +95,12 @@ def message_reply(message) -> None:
         args.pop(0)
         clean = [shlex.quote(i) for i in args]
         full_command = shlex.split(f"{command} {''.join(clean)}")
-        result = subprocess.run(full_command, capture_output=True).stdout.decode()
-        bot.send_message(message.chat.id, f"{result}")
+        try:
+            result = subprocess.run(full_command, capture_output=True).stdout.decode()
+            await bot.send_message(message.chat.id, f"{result}")
+        except Exception as error:
+            logger.error(error)
     elif message.text == '💲 USD - EUR 💲':
-        # bot.send_message(message.chat.id, "https://cbr.ru/key-indicators/")
         try:
             binance = requests.get('https://api.binance.com/api/v1/ticker/24hr').json()
             price_btc, price_eth = 0, 0
@@ -121,57 +118,58 @@ def message_reply(message) -> None:
             with open('/sys/class/thermal/thermal_zone0/temp', 'r') as termal:
                 temperature = round(int(termal.read()) / 1000, 2)
                 temperature = f"Температура = {temperature} 'C"
-            bot.send_message(message.chat.id, f'Центробанк РФ:   {result_bank}\nБиржа Binance:   '
-                                              f'{result_binance}\n{temperature}')
+            await bot.send_message(message.chat.id, f'Центробанк РФ:   {result_bank}\n'
+                                                    f'Биржа Binance:   {result_binance}\n'
+                                                    f'{temperature}')
         except OSError:
-            print('Сервер недоступен')
-            bot.send_message(message.chat.id, 'Сервер недоступен')
+            logger.error('Сервер недоступен')
+            await bot.send_message(message.chat.id, 'Сервер недоступен')
     elif message.text == "🐷 Водички? 🐷":
         try:
             url_img = ("https://bestwine24.ru/image/cache/catalog/vodka"
                        "/eef2e315f762519e75aba64a800b63e9-540x720.jpg")
-            bot.send_photo(message.chat.id, photo=url_img)
-        except Exception as er:
-            logger.info(er)
-            if str(er).find('Error code: 400'):
+            await bot.send_photo(message.chat.id, photo=url_img)
+        except Exception as error:
+            logger.error(error)
+            if str(error).find('Error code: 400'):
                 img_file = open(f'vacancies/vodka.jpg', 'rb')
-                bot.send_document(message.chat.id, img_file)
+                await bot.send_document(message.chat.id, img_file)
     elif message.text == "😎 read file 😎":
         if message.chat.id in (USER_1, USER_2):
-            send_vacancies(message)
+            await send_vacancies(message)
         else:
-            bot.send_message(message.chat.id, 'Вам запрещено читать локальный файл 😄')
+            await bot.send_message(message.chat.id, 'Вам запрещено читать локальный файл 😄')
     elif message.text == "🌼 led on 🌼":
         if message.chat.id == USER_2:
             GPIO.setwarnings(False)
             GPIO.setmode(GPIO.BCM)
             GPIO.setup(25, GPIO.OUT)
             GPIO.output(25, GPIO.HIGH)
-            bot.send_message(USER_2, 'Включаю чайник 😄')
+            await bot.send_message(USER_2, 'Включаю чайник 😄')
         else:
-            bot.send_message(message.chat.id, 'Вам запрещено включать чайник 😄')
+            await bot.send_message(message.chat.id, 'Вам запрещено включать чайник 😄')
     elif message.text == "🌼 led off 🌼":
         if message.chat.id == USER_2:
             GPIO.setwarnings(False)
             GPIO.setmode(GPIO.BCM)
             GPIO.setup(25, GPIO.OUT)
             GPIO.output(25, GPIO.LOW)
-            bot.send_message(USER_2, 'Выключаю чайник 😄')
+            await bot.send_message(USER_2, 'Выключаю чайник 😄')
         else:
-            bot.send_message(message.chat.id, 'Вам запрещено выключать чайник 😄')
+            await bot.send_message(message.chat.id, 'Вам запрещено выключать чайник 😄')
     elif message.text == "🤓 мой id 🤓":
-        bot.send_message(message.chat.id, f'id - {message.chat.id}\nИмя - {message.from_user.full_name}'
-                                          f'\nПользователь - {message.chat.username}')
+        await bot.send_message(message.chat.id, f'id - {message.chat.id}\nИмя - '
+                                                f'{message.from_user.full_name}\nПользователь - '
+                                                f'{message.chat.username}')
     elif message.text == "🚷 bot_stop 🚷":
         if message.chat.id == USER_1:
-            bot.send_message(message.chat.id, 'Выключаю бота 😄')
+            await bot.send_message(message.chat.id, 'Выключаю бота 😄')
             try:
-                # bot.stop_polling()
-                bot.stop_bot()
+                await bot.stop_poll(message.chat.id, 1)
             except RuntimeError:
-                print('Выключение бота')
+                logger.error('Выключение бота')
         else:
-            bot.send_message(message.chat.id, 'Вам запрещено выключать бота 😄')
+            await bot.send_message(message.chat.id, 'Вам запрещено выключать бота 😄')
     elif message.text == "🙏 работа 🙏":
         if message.chat.id in (USER_5, USER_6):
             search_jobs(message.chat.id, '', 'парикмахер', '1979', '30')
@@ -180,31 +178,58 @@ def message_reply(message) -> None:
             with open(text, 'r', encoding='utf-8') as txt:
                 count += int(txt.readline().strip()[20:])
             if count > 10:
-                send_vacancies(message)
+                await send_vacancies(message)
             else:
                 with open(text, 'r', encoding='utf-8') as txt:
-                    bot.send_message(message.chat.id, f'{txt.read()}')
+                    await bot.send_message(message.chat.id, f'{txt.read()}')
         else:
-            bot.send_message(message.chat.id, 'Введите данные для поиска в таком порядке:\n\n'
-                                              '*[город] [профессия с желаемой зарплатой] [число '
-                                              'дней публикации объявлений (max=30)]\n\nПримеры:\n\n'
-                                              '*Воронеж водитель 30\n\n'
-                                              '*Красноярск учитель истории 50000 07\n\n'
-                                              'где <*> - обязательный символ в начале,\n'
-                                              '<Красноярск> - это город, вакансии по которому '
-                                              'будут искаться,\n<учитель истории> - профессия для '
-                                              'поиска,\n<50000> - минимальный уровень зарплаты для '
-                                              'поиска,\nа <07> - поиск за последние 7 дней.')
+            await bot.send_message(message.chat.id, 'Введите данные для поиска в таком порядке:\n\n'
+                                                    '*[город] [профессия с желаемой зарплатой] ['
+                                                    'число дней публикации объявлений (max=30)]\n\n'
+                                                    'Примеры:\n\n*Воронеж водитель 30\n\n'
+                                                    '*Красноярск учитель истории 50000 07\n\n'
+                                                    'где <*> - обязательный символ в начале,\n'
+                                                    '<Красноярск> - это город, вакансии по которому'
+                                                    ' будут искаться,\n<учитель истории> - '
+                                                    'профессия для поиска,\n<50000> - минимальный'
+                                                    ' уровень зарплаты для поиска,\nа <07> - поиск'
+                                                    ' за последние 7 дней.')
     elif message.text == '🚷 stop 🚷':
         global NEW
         NEW[f'{message.chat.id}'] = 1
+    elif message.text.startswith == 'https://youtu.be/' or 'https://www.youtube.com/':
+        yt = YouTube(message.text)
+        await bot.send_message(message.chat.id, f'*Начинаю загрузку видео*: *{yt.title}*\n'
+                                                f'*С канала*: [{yt.author}]({yt.channel_url})',
+                               parse_mode='Markdown')
+        await download_video(message)
     else:
-        bot.send_message(message.chat.id, f'Не надо баловаться 😡 {message.chat.first_name}\n\n'
-                                          f'😜 И тебе того же:   {message.text}')
+        await bot.send_message(message.chat.id, f'Не надо баловаться 😡 {message.chat.first_name}'
+                                                f'\n\n😜 И тебе того же:   {message.text}')
 
 
-def send_vacancies(message) -> None:
+async def download_video(message: types.Message) -> None:
+    """ Скачивает видео с youtube """
+    logger.info(message.text)
+    user_id = message.from_user.id
+    yt = YouTube(message.text)
+    stream = yt.streams.filter(progressive=True, file_extension='mp4')
+    title = yt.title.split(' ')[0]
+    try:
+        stream.get_highest_resolution().download(f'{user_id}', f'{user_id}_{title}.mp4')
+        with open(f'{user_id}/{user_id}_{title}.mp4', 'rb') as video:
+            await bot.send_video(user_id, video, caption='*вот ваше видео*', parse_mode='Markdown')
+            os.remove(f'{user_id}/{user_id}_{title}.mp4')
+    except NetworkError as error:
+        await bot.send_message(message.chat.id, '*Bots can currently send video files of up to'
+                                                ' 50 MB in size, this limit may be changed in '
+                                                'the future.*')
+        logger.error(error)
+
+
+async def send_vacancies(message: types.Message) -> None:
     """ Читает локальный файл с вакансиями """
+    logger.info(message.text)
     text = f'vacancies/{message.chat.id}.txt'
     count = 0
     count_local = 0
@@ -213,10 +238,11 @@ def send_vacancies(message) -> None:
         count_local += int(txt.read().strip().count('🚘'))
     count_spam = count - count_local
     if message.chat.id in (USER_5, USER_6):
-        bot.send_message(message.chat.id, f'Всего вакансий: {count}. В локальной базе: '
-                                          f'{count_local}. Удаленных вакансий-спама: {count_spam}.')
+        await bot.send_message(message.chat.id, f'Всего вакансий: {count}. В локальной базе: '
+                                                f'{count_local}. Удаленных вакансий-спама: '
+                                                f'{count_spam}.')
     else:
-        bot.send_message(message.chat.id, f'Число вакансий:  {count_local}')
+        await bot.send_message(message.chat.id, f'Число вакансий:  {count_local}')
     sleep(3)
     global NEW
     NEW[f'{message.chat.id}'] = 0
@@ -224,27 +250,20 @@ def send_vacancies(message) -> None:
         with open(text, 'r', encoding='utf-8') as txt:
             for line in txt.readlines():
                 if NEW[f'{message.chat.id}'] == 1:
-                    bot.send_message(message.chat.id, 'Принудительная остановка вывода вакансий')
+                    await bot.send_message(message.chat.id, 'Принудительная остановка вывода '
+                                                            'вакансий')
                     break
                 elif len(line) < 3:
                     continue
                 elif line.count('*') > 2:
-                    bot.send_message(message.chat.id, line.strip())
+                    await bot.send_message(message.chat.id, line.strip())
                 elif line.find('https://') != -1:
-                    bot.send_message(message.chat.id, line.strip())
+                    await bot.send_message(message.chat.id, line.strip())
                 elif line.startswith('🚘'):
                     sleep(5)
     NEW[f'{message.chat.id}'] = 0
-    print(NEW)
+    logger.info(f'{NEW}')
 
 
 if __name__ == '__main__':
-    while True:
-        try:
-            bot.polling(none_stop=True)
-        except BaseException as error:
-            print(error)
-            sleep(30)
-            continue
-        finally:
-            GPIO.cleanup()
+    executor.start_polling(dp)

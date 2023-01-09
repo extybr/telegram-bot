@@ -1,4 +1,5 @@
 import requests
+from loguru import logger
 
 
 def search_jobs(telegram_id, telegram_role: str, telegram_profession: str, telegram_area: str,
@@ -7,6 +8,8 @@ def search_jobs(telegram_id, telegram_role: str, telegram_profession: str, teleg
     Парсер вакансий с сайта hh.ru
     :return: None
     """
+    logger.info(f'Переданы параметры: {telegram_id}, {telegram_role}, {telegram_profession}, '
+                f'{telegram_area}, {telegram_period}')
     try:
         professional_role = f'&professional_role={telegram_role}' if len(telegram_role) > 1 else ''
         text_profession = f'&text={telegram_profession}'  # ключевое слово для поиска
@@ -25,12 +28,11 @@ def search_jobs(telegram_id, telegram_role: str, telegram_profession: str, teleg
             'Connection': 'keep-alive'
         }
 
-        print('Headhunter: парсинг вакансий')
+        logger.info('Headhunter: парсинг вакансий')
         result = requests.get(url, headers)
         results = result.json()
         count_vacancies = results.get('found')
-        print('Найдено результатов:', count_vacancies)
-        print('\n' + '*' * 50 + '\n')
+        logger.info(f'Найдено результатов: {count_vacancies}')
         with open(f'vacancies/{telegram_id}.txt', 'w', encoding='utf-8') as text:
             text.write('Найдено результатов: ' + str(count_vacancies) + '\n\n')
         items = results.get('items', {})
@@ -70,20 +72,24 @@ def search_jobs(telegram_id, telegram_role: str, telegram_profession: str, teleg
                     text.write(output.center(50, '*') + '\n')
                 text.close()
     except OSError as error:
-        print(f'Статус: проблемы с доступом в интернет\n{error}')
+        logger.error(f'Статус: проблемы с доступом в интернет\n{error}')
 
 
 def region_id(region: str) -> str:
-    url = f'https://api.hh.ru/suggests/areas?text={region}'
-    headers = {
-        'Host': 'api.hh.ru',
-        'User-Agent': 'Mozilla/5.0',
-        'Accept': '*/*',
-        'Accept-Encoding': 'gzip, deflate, br',
-        'Connection': 'keep-alive'
-    }
-    result = requests.get(url, headers)
-    results = result.json()
-    items = results.get('items', {})
-    id_region = [i['id'] for i in items]
-    return id_region[0] if len(id_region) > 0 else None
+    """ Получение id региона """
+    try:
+        url = f'https://api.hh.ru/suggests/areas?text={region}'
+        headers = {
+            'Host': 'api.hh.ru',
+            'User-Agent': 'Mozilla/5.0',
+            'Accept': '*/*',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Connection': 'keep-alive'
+        }
+        result = requests.get(url, headers)
+        results = result.json()
+        items = results.get('items', {})
+        id_region = [i['id'] for i in items]
+        return id_region[0] if len(id_region) > 0 else None
+    except OSError as error:
+        logger.error(f'Статус: проблемы с доступом в интернет\n{error}')

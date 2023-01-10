@@ -28,7 +28,7 @@ def search_jobs(telegram_id, telegram_role: str, telegram_profession: str, teleg
             'Connection': 'keep-alive'
         }
 
-        logger.info('Headhunter: парсинг вакансий')
+        logger.info('hh.ru: парсинг вакансий')
         result = requests.get(url, headers)
         results = result.json()
         count_vacancies = results.get('found')
@@ -77,6 +77,7 @@ def search_jobs(telegram_id, telegram_role: str, telegram_profession: str, teleg
 
 def region_id(region: str) -> str:
     """ Получение id региона """
+    logger.info(f'Запрос кода региона: {region}')
     try:
         url = f'https://api.hh.ru/suggests/areas?text={region}'
         headers = {

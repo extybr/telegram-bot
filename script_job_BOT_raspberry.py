@@ -68,12 +68,14 @@ async def text_message(message: types.Message):
             profession += ''.join(i + ' ')
         profession = profession.strip()
         region = region_id(hr[0][1:])
-        days = hr[len(hr) - 1]
+        days = hr[-1]
         if region is None:
             await bot.send_message(message.chat.id, 'Вы неправильно ввели название города')
-        elif len(days) != 2:
+        elif len(days) != 2 or not days.isdigit() or days == '00':
             await bot.send_message(message.chat.id, 'Вы неправильно ввели дату для поиска')
         else:
+            if int(days) > 30:
+                days = '30'
             search_jobs(message.chat.id, '', f'{profession}', f'{region}', f'{days}')
             count = 0
             text = f'vacancies/{message.chat.id}.txt'
@@ -187,19 +189,20 @@ async def text_message(message: types.Message):
                                                     '\n\n`*`*[город] [профессия с желаемой '
                                                     'зарплатой] [число дней публикации объявлений '
                                                     '(max=30)]\n\nПримеры*:\n`*Воронеж водитель '
-                                                    '30`\n`*Красноярск учитель истории 50000 07`'
-                                                    '\n\n_где <*> - обязательный символ в начале,\n'
-                                                    '<Красноярск> - это город, вакансии по которому'
-                                                    ' будут искаться,\n<учитель истории> - '
-                                                    'профессия для поиска,\n<50000> - минимальный'
-                                                    ' уровень зарплаты для поиска,\nа <07> - поиск'
-                                                    ' за последние 7 дней_.', parse_mode='Markdown')
+                                                    '10`\n`*Хабаровский край парикмахер 30`'
+                                                    '\n`*Красноярск учитель истории 50000 07`'
+                                                    '\n\nгде `*` - обязательный символ в начале,\n'
+                                                    '`Красноярск` - это город, вакансии по которому'
+                                                    ' будут искаться,\n`учитель истории` - '
+                                                    'профессия для поиска,\n`50000` - минимальный'
+                                                    ' уровень зарплаты для поиска,\n`07` - поиск'
+                                                    ' за последние 7 дней.', parse_mode='Markdown')
     elif message.text == '🚷 stop 🚷':
         global NEW
         NEW[f'{message.chat.id}'] = 1
         logger.info(f'{NEW}')
-    elif [i for i in ['https://youtu.be/', 'https://www.youtu.be/', 'https://www.youtube.com/',
-                      'https://youtube.com/'] if message.text.startswith(i)]:
+    elif [i for i in ['https://youtu.be/', 'https://www.youtu.be/', 'https://youtube.com/',
+                      'https://www.youtube.com/'] if message.text.startswith(i)]:
         yt = YouTube(message.text)
         await bot.send_message(message.chat.id, f'*Начинаю загрузку видео*: *{yt.title}*\n'
                                                 f'*С канала*: [{yt.author}]({yt.channel_url})',
@@ -207,7 +210,7 @@ async def text_message(message: types.Message):
         await download_video(message)
     else:
         await bot.send_message(message.chat.id, f'*Не надо баловаться* 😡 *{message.chat.first_name}*'
-                                                f'\n\n😜 *И тебе того же:   {message.text}*', 
+                                                f'\n\n😜 *И тебе того же:   {message.text}*',
                                parse_mode='Markdown')
 
 
@@ -224,7 +227,7 @@ async def download_video(message: types.Message) -> None:
                                  parse_mode='Markdown')
             os.remove(f'{user_id}/{user_id}_{yt.title}.mp4')
     except NetworkError as error:
-        await bot.send_message(message.chat.id, 'Ограничение!!! Лимит на закачку ботом 50MB.', 
+        await bot.send_message(message.chat.id, '*Ограничение!!! Лимит на закачку ботом 50MB*.',
                                parse_mode='Markdown')
         os.remove(f'{user_id}/{user_id}_{yt.title}.mp4')
         logger.error(error)

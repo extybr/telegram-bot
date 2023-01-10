@@ -193,10 +193,11 @@ async def text_message(message: types.Message):
                                                     ' будут искаться,\n<учитель истории> - '
                                                     'профессия для поиска,\n<50000> - минимальный'
                                                     ' уровень зарплаты для поиска,\nа <07> - поиск'
-                                                    ' за последние 7 дней.')
+                                                    ' за последние 7 дней.', parse_mode='Markdown')
     elif message.text == '🚷 stop 🚷':
         global NEW
         NEW[f'{message.chat.id}'] = 1
+        logger.info(f'{NEW}')
     elif [i for i in ['https://youtu.be/', 'https://www.youtu.be/', 'https://www.youtube.com/',
                       'https://youtube.com/'] if message.text.startswith(i)]:
         yt = YouTube(message.text)
@@ -205,8 +206,9 @@ async def text_message(message: types.Message):
                                parse_mode='Markdown')
         await download_video(message)
     else:
-        await bot.send_message(message.chat.id, f'Не надо баловаться 😡 {message.chat.first_name}'
-                                                f'\n\n😜 И тебе того же:   {message.text}')
+        await bot.send_message(message.chat.id, f'*Не надо баловаться* 😡 *{message.chat.first_name}*'
+                                                f'\n\n😜 *И тебе того же:   {message.text}*', 
+                               parse_mode='Markdown')
 
 
 async def download_video(message: types.Message) -> None:
@@ -215,16 +217,15 @@ async def download_video(message: types.Message) -> None:
     user_id = message.from_user.id
     yt = YouTube(message.text)
     stream = yt.streams.filter(progressive=True, file_extension='mp4')
-    title = yt.title.split(' ')[0]
     try:
-        stream.get_highest_resolution().download(f'{user_id}', f'{user_id}_{title}.mp4')
-        with open(f'{user_id}/{user_id}_{title}.mp4', 'rb') as video:
-            await bot.send_video(user_id, video, caption='*вот ваше видео*', parse_mode='Markdown')
-            os.remove(f'{user_id}/{user_id}_{title}.mp4')
+        stream.get_highest_resolution().download(f'{user_id}', f'{user_id}_{yt.title}.mp4')
+        with open(f'{user_id}/{user_id}_{yt.title}.mp4', 'rb') as video:
+            await bot.send_video(user_id, video, caption='*Готово. Ваше видео*: *{yt.title}*', parse_mode='Markdown')
+            os.remove(f'{user_id}/{user_id}_{yt.title}.mp4')
     except NetworkError as error:
-        await bot.send_message(message.chat.id, '*Bots can currently send video files of up to'
-                                                ' 50 MB in size, this limit may be changed in '
-                                                'the future.*')
+        await bot.send_message(message.chat.id, 'Ограничение!!! Лимит на закачку ботом 50MB.', 
+                               parse_mode='Markdown')
+        os.remove(f'{user_id}/{user_id}_{yt.title}.mp4')
         logger.error(error)
 
 

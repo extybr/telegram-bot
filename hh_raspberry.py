@@ -2,8 +2,8 @@ import requests
 from loguru import logger
 
 
-def search_jobs(telegram_id, telegram_role: str, telegram_profession: str, telegram_area: str,
-                telegram_period: str) -> None:
+def search_job(telegram_id, telegram_role: str, telegram_profession: str, telegram_area: str,
+               telegram_period: str) -> None:
     """
     Парсер вакансий с сайта hh.ru
     :return: None

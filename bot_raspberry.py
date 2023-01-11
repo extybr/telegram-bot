@@ -8,7 +8,7 @@ from pytube import YouTube
 from loguru import logger
 import RPi.GPIO as GPIO
 from config import *
-from script_job_raspberry import search_jobs, region_id
+from hh_raspberry import search_job, region_id
 
 bot = Bot(TOKEN)
 dp = Dispatcher(bot)
@@ -18,15 +18,13 @@ GPIO.setmode(GPIO.BCM)
 GPIO.setup(25, GPIO.OUT)
 
 
-@dp.message_handler(commands=['start'])
-async def start_message(message: types.Message):
-    """ Функция вывода при старте: определение кнопок, приветствие """
-    logger.info(message.chat.id)
+async def commands():
+    """ Функция вывода при старте: определение кнопок """
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     button_1 = types.KeyboardButton('💲 USD - EUR 💲')
     button_2 = types.KeyboardButton('🐷 Водички? 🐷')
     button_3 = types.KeyboardButton('🙏 работа 🙏')
-    button_4 = types.KeyboardButton('🚷 bot_stop 🚷')
+    button_4 = types.KeyboardButton('🚷 admin 🚷')
     button_5 = types.KeyboardButton('😎 read file 😎')
     button_6 = types.KeyboardButton('🌼 led on 🌼')
     button_7 = types.KeyboardButton('🌼 led off 🌼')
@@ -34,14 +32,27 @@ async def start_message(message: types.Message):
     button_9 = types.KeyboardButton('🚷 stop 🚷')
     markup.row(button_1, button_3, button_9, button_8)
     markup.row(button_2, button_5, button_6, button_7, button_4)
+    root = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    cmd = types.KeyboardButton('✅Скриншот')
+    off = types.KeyboardButton('⛔️reboot⛔️')
+    info = types.KeyboardButton('🖥О компьютере')
+    back = types.KeyboardButton('⏪Назад⏪')
+    root.row(info, cmd, off, back)
+    return markup, root
+
+
+@dp.message_handler(commands=['start'])
+async def start_message(message: types.Message):
+    """ Функция вывода при старте: приветствие """
+    logger.info(f'{message.chat.id}: Старт бота')
     await bot.send_message(message.chat.id, 'Ну что готов к поиску работы? 😄 Жми кнопки-команды '
-                                            'внизу', reply_markup=markup)
+                                            'внизу', reply_markup=(await commands())[0])
     try:
         url = 'https://skyteach.ru/wp-content/cache/thumb/d7/81a695a40a5dfd7_730x420.jpg'
-        await bot.send_photo(message.chat.id, photo=url, reply_markup=markup)
-    except Exception as er:
-        logger.info(er)
-        if str(er).find('Error code: 400'):
+        await bot.send_photo(message.chat.id, photo=url)
+    except Exception as error:
+        logger.info(error)
+        if str(error).find('Error code: 400'):
             img_file = open(f'vacancies/job.jpg', 'rb')
             await bot.send_document(message.chat.id, img_file)
 
@@ -52,9 +63,9 @@ async def text_message(message: types.Message):
     Функция, обрабатывает нажатие кнопок бота
     Логирование в терминал
     Парсит курсы валют
-    Запуск по условию: включение светодиода (реле), парсера вакансий, остановка бота
+    Запуск по условию: включение светодиода (реле), парсера вакансий, перезагрузка
     """
-    logger.info(message.text)
+    logger.info(f'{message.chat.id}: {message.text}')
     if message.text.startswith('*'):
         hr = message.text.split(' ')
         profession = ''
@@ -76,7 +87,7 @@ async def text_message(message: types.Message):
         else:
             if int(days) > 30:
                 days = '30'
-            search_jobs(message.chat.id, '', f'{profession}', f'{region}', f'{days}')
+            search_job(message.chat.id, '', f'{profession}', f'{region}', f'{days}')
             count = 0
             text = f'vacancies/{message.chat.id}.txt'
             with open(text, 'r', encoding='utf-8') as txt:
@@ -163,18 +174,21 @@ async def text_message(message: types.Message):
         await bot.send_message(message.chat.id, f'id - {message.chat.id}\nИмя - '
                                                 f'{message.from_user.full_name}\nПользователь - '
                                                 f'{message.chat.username}')
-    elif message.text == "🚷 bot_stop 🚷":
+    elif message.text == "🚷 admin 🚷":
         if message.chat.id == USER_1:
-            await bot.send_message(message.chat.id, 'Выключаю бота 😄')
-            try:
-                await bot.stop_poll(message.chat.id, 1)
-            except RuntimeError:
-                logger.error('Выключение бота')
+            await bot.send_message(message.chat.id, "❇️Дополнительно",
+                                   reply_markup=(await commands())[1])
         else:
-            await bot.send_message(message.chat.id, 'Вам запрещено выключать бота 😄')
+            await bot.send_message(message.chat.id, 'Эта кнопка только для администратора 😄')
+            alert = (f"Кто-то пытался задать команду: {message.text}\n\nuser id: "
+                     f"{message.from_user.id}\n"
+                     f"first name: {message.from_user.first_name}\nlast name: "
+                     f"{message.from_user.last_name}"
+                     f"\nusername: @{message.from_user.username}")
+            await bot.send_message(USER_1, alert)
     elif message.text == "🙏 работа 🙏":
         if message.chat.id in (USER_5, USER_6):
-            search_jobs(message.chat.id, '', 'парикмахер', '1979', '30')
+            search_job(message.chat.id, '', 'парикмахер', '1979', '30')
             count = 0
             text = f'vacancies/{message.chat.id}.txt'
             with open(text, 'r', encoding='utf-8') as txt:
@@ -185,18 +199,15 @@ async def text_message(message: types.Message):
                 with open(text, 'r', encoding='utf-8') as txt:
                     await bot.send_message(message.chat.id, f'{txt.read()}')
         else:
-            await bot.send_message(message.chat.id, '*Введите данные для поиска в таком порядке*:'
-                                                    '\n\n`*`*[город] [профессия с желаемой '
-                                                    'зарплатой] [число дней публикации объявлений '
-                                                    '(max=30)]\n\nПримеры*:\n`*Воронеж водитель '
-                                                    '10`\n`*Хабаровский край парикмахер 30`'
-                                                    '\n`*Красноярск учитель истории 50000 07`'
-                                                    '\n\nгде `*` - обязательный символ в начале,\n'
-                                                    '`Красноярск` - это город, вакансии по которому'
-                                                    ' будут искаться,\n`учитель истории` - '
-                                                    'профессия для поиска,\n`50000` - минимальный'
-                                                    ' уровень зарплаты для поиска,\n`07` - поиск'
-                                                    ' за последние 7 дней.', parse_mode='Markdown')
+            example_search = ('*Введите данные для поиска в таком порядке*:\n\n`*`*[город] ['
+                              'профессия с желаемой зарплатой] [число дней публикации объявлений '
+                              '(max=30)]\n\nПримеры*:\n`*Воронеж водитель 10`\n`*Хабаровский край '
+                              'парикмахер 30`\n`*Красноярск учитель истории 50000 07`\n\nгде `*` '
+                              '- обязательный символ в начале,\n`Красноярск` - это город, вакансии '
+                              'по которому будут искаться,\n`учитель истории` - профессия для '
+                              'поиска,\n`50000` - минимальный уровень зарплаты для поиска,\n`07` - '
+                              'поиск за последние 7 дней.')
+            await bot.send_message(message.chat.id, example_search, parse_mode='Markdown')
     elif message.text == '🚷 stop 🚷':
         global NEW
         NEW[f'{message.chat.id}'] = 1
@@ -208,15 +219,40 @@ async def text_message(message: types.Message):
                                                 f'*С канала*: [{yt.author}]({yt.channel_url})',
                                parse_mode='Markdown')
         await download_video(message)
+    elif message.text == "⛔️reboot⛔️":
+        if message.chat.id == USER_1:
+            await bot.send_message(message.chat.id, 'Выключаю 😄')
+            try:
+                from os import system
+                system('reboot')
+            except RuntimeError:
+                logger.error('Выключение бота')
+    elif message.text == "🖥О компьютере":
+        from platform import platform, processor
+        ip = requests.get('http://ip.42.pl/raw').text
+        uname = os.getlogin()
+        system = platform()
+        processor = processor()
+        await bot.send_message(USER_1, f"*Пользователь:* {uname}\n*IP:* {ip}\n*ОС:* {system}\n"
+                                       f"*Процессор:* {processor}", parse_mode="markdown")
+    elif message.text == "✅Скриншот":
+        from PIL import ImageGrab
+        screen = ImageGrab.grab(bbox=None, all_screens=True)
+        screen.save('screenshot.png')
+        img_file = open('screenshot.png', 'rb')
+        await bot.send_photo(message.chat.id, img_file)
+        os.remove('screenshot.png')
+    elif message.text == "⏪Назад⏪":
+        await bot.send_message(message.chat.id, "⏪Назад⏪", reply_markup=(await commands())[0])
     else:
-        await bot.send_message(message.chat.id, f'*Не надо баловаться* 😡 *{message.chat.first_name}*'
-                                                f'\n\n😜 *И тебе того же:   {message.text}*',
-                               parse_mode='Markdown')
+        fail = (f'*Не надо баловаться* 😡 *{message.chat.first_name}*\n\n😜 *И тебе того же:   '
+                f'{message.text}*')
+        await bot.send_message(message.chat.id, fail, parse_mode='Markdown')
 
 
 async def download_video(message: types.Message) -> None:
     """ Скачивает видео с youtube """
-    logger.info(message.text)
+    logger.info(f'{message.chat.id}: {message.text}')
     user_id = message.from_user.id
     yt = YouTube(message.text)
     stream = yt.streams.filter(progressive=True, file_extension='mp4')
@@ -235,7 +271,7 @@ async def download_video(message: types.Message) -> None:
 
 async def send_vacancies(message: types.Message) -> None:
     """ Читает локальный файл с вакансиями """
-    logger.info(message.text)
+    logger.info(f'{message.chat.id}: {message.text}')
     text = f'vacancies/{message.chat.id}.txt'
     count = 0
     count_local = 0
@@ -244,9 +280,9 @@ async def send_vacancies(message: types.Message) -> None:
         count_local += int(txt.read().strip().count('🚘'))
     count_spam = count - count_local
     if message.chat.id in (USER_5, USER_6):
-        await bot.send_message(message.chat.id, f'Всего вакансий: {count}. В локальной базе: '
-                                                f'{count_local}. Удаленных вакансий-спама: '
-                                                f'{count_spam}.')
+        user_text = (f'Всего вакансий: {count}. В локальной базе: {count_local}. Удаленных '
+                     f'вакансий-спама: {count_spam}.')
+        await bot.send_message(message.chat.id, user_text)
     else:
         await bot.send_message(message.chat.id, f'Число вакансий:  {count_local}')
     sleep(3)

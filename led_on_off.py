@@ -7,6 +7,7 @@ class Led:
     GPIO.setup(25, GPIO.OUT)
 
     def set_led_on_off(self, level):
+        """ Включение/выключение светодиода (реле) """
         GPIO.setwarnings(False)
         GPIO.setmode(GPIO.BCM)
         GPIO.setup(25, GPIO.OUT)

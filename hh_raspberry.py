@@ -4,10 +4,7 @@ from loguru import logger
 
 def search_job(telegram_id, telegram_role: str, telegram_profession: str, telegram_area: str,
                telegram_period: str) -> None:
-    """
-    Парсер вакансий с сайта hh.ru
-    :return: None
-    """
+    """  Парсер вакансий с сайта hh.ru """
     logger.info(f'Переданы параметры: {telegram_id}, {telegram_role}, {telegram_profession}, '
                 f'{telegram_area}, {telegram_period}')
     try:

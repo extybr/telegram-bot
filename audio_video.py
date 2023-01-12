@@ -6,16 +6,16 @@ import os.path
 
 
 async def download_video(message: types.Message, bot) -> None:
-    """ Скачивает аудио, видео с youtube """
+    """ Скачивает аудио/видео с youtube """
     logger.info(f'{message.chat.id}: {message.text}')
     user_id = message.from_user.id
     audio_video_url = message.text.split(' ')
     yt = YouTube(message.text)
-    await bot.send_message(message.chat.id, f'*Начинаю загрузку видео*: *{yt.title}*\n'
-                                            f'*С канала*: [{yt.author}]({yt.channel_url})',
-                           parse_mode='Markdown')
     try:
         if len(audio_video_url) == 1:
+            await bot.send_message(message.chat.id, f'*Начинаю загрузку видео*: *{yt.title}*\n'
+                                                    f'*С канала*: [{yt.author}]({yt.channel_url})',
+                                   parse_mode='Markdown')
             stream = yt.streams.filter(progressive=True, file_extension='mp4')
             stream.get_highest_resolution().download('youtube', f'{user_id}_{yt.title}.mp4')
             with open(f'youtube/{user_id}_{yt.title}.mp4', 'rb') as video:
@@ -23,6 +23,9 @@ async def download_video(message: types.Message, bot) -> None:
                                      parse_mode='Markdown')
                 os.remove(f'youtube/{user_id}_{yt.title}.mp4')
         elif len(audio_video_url) == 2 and audio_video_url[1] == 'audio':
+            await bot.send_message(message.chat.id, f'*Начинаю загрузку аудио дорожки*: *{yt.title}'
+                                                    f'*\n*С канала*: [{yt.author}]({yt.channel_url})',
+                                   parse_mode='Markdown')
             yt = YouTube(audio_video_url[0])
             stream = yt.streams.filter(only_audio=True).first()
             stream.download('youtube', f'{user_id}_{yt.title}.mp4')

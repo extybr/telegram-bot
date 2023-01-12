@@ -4,6 +4,7 @@ from aiogram import types
 
 
 async def exchange(message: types.Message, bot):
+    """ Парсит курсы валют, показывает температуру RaspberryPi """
     try:
         binance = get('https://api.binance.com/api/v1/ticker/24hr').json()
         price_btc, price_eth = 0, 0

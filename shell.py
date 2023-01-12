@@ -5,6 +5,7 @@ from loguru import logger
 
 
 async def shell_cmd(message: types.Message, bot):
+    """ Выводит пользователю результат команды терминала (ограничение по длине вывода) """
     command = message.text[1:]
     args = command.split(' ')
     args.pop(0)

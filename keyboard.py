@@ -18,7 +18,7 @@ async def commands():
     button_9 = types.KeyboardButton('💡 led off 💡')
     button_10 = types.KeyboardButton('✅Скриншот')
     button_11 = types.KeyboardButton('⛔️reboot⛔️')
-    button_12 = types.KeyboardButton('🖥О компьютере')
+    button_12 = types.KeyboardButton('🖥О сервере')
     button_13 = types.KeyboardButton('⏪Назад⏪')
     root.row(button_7, button_3, button_8, button_9)
     root.row(button_10, button_11, button_12, button_13)

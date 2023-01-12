@@ -8,6 +8,7 @@ from config import *
 
 
 async def get_system_info(bot):
+    """ Информация о системе пк """
     try:
         ip = get('http://ip.42.pl/raw').text
         req = get(url=f'http://ip-api.com/json/{ip}').json()

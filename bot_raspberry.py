@@ -41,8 +41,6 @@ async def text_message(message: types.Message):
     """
     Функция, обрабатывает нажатие кнопок бота
     Логирование в терминал
-    Парсит курсы валют
-    Запуск по условию: включение светодиода (реле), парсера вакансий, перезагрузка
     """
     logger.info(f'{message.chat.id}: {message.text}')
 
@@ -125,7 +123,7 @@ async def text_message(message: types.Message):
         await bot.send_message(message.chat.id, user_information, parse_mode='Markdown')
 
     elif message.text == "🔐 admin 🔐":
-        if message.chat.id == USER_1:
+        if message.chat.id in (USER_1, USER_2):
             await bot.send_message(message.chat.id, "❇️ Админ панель",
                                    reply_markup=(await commands())[1])
         else:
@@ -177,7 +175,7 @@ async def text_message(message: types.Message):
             except RuntimeError:
                 logger.error('Перезагрузка')
 
-    elif message.text == "🖥О компьютере":
+    elif message.text == "🖥О сервере":
         await get_system_info(bot)
 
     elif message.text == "✅Скриншот":

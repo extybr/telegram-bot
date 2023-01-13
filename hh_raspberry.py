@@ -1,4 +1,4 @@
-import requests
+from requests import get
 from loguru import logger
 
 
@@ -26,7 +26,7 @@ def search_job(telegram_id, telegram_role: str, telegram_profession: str, telegr
         }
 
         logger.info('hh.ru: парсинг вакансий')
-        result = requests.get(url, headers)
+        result = get(url, headers)
         results = result.json()
         count_vacancies = results.get('found')
         logger.info(f'Найдено результатов: {count_vacancies}')
@@ -84,7 +84,7 @@ def region_id(region: str) -> str:
             'Accept-Encoding': 'gzip, deflate, br',
             'Connection': 'keep-alive'
         }
-        result = requests.get(url, headers)
+        result = get(url, headers)
         results = result.json()
         items = results.get('items', {})
         id_region = [i['id'] for i in items]

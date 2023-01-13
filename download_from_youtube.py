@@ -5,7 +5,7 @@ from pytube import YouTube
 import os.path
 
 
-async def download_video(message: types.Message, bot) -> None:
+async def download_video_audio(message: types.Message, bot) -> None:
     """ Скачивает аудио/видео с youtube """
     logger.info(f'{message.chat.id}: {message.text}')
     user_id = message.from_user.id

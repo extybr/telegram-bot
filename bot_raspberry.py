@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
 import os.path
-from aiogram import *
+from aiogram import types, Dispatcher, Bot, executor
 from loguru import logger
 from config import *
 from hh_raspberry import search_job, region_id
 from read_vacancies import send_vacancies
-from audio_video import download_video
+from download_from_youtube import download_video_audio
 from keyboard import commands
-from exchange_rate import exchange
+from exchange_rate import exchange, link_image
 from system_info import get_system_info
 from led_on_off import Led
 from screenshot import get_screenshot
 from shell import shell_cmd
 
-bot = Bot(TOKEN)
+bot = Bot(TOKEN, )
 dp = Dispatcher(bot)
 
 
@@ -26,14 +26,8 @@ async def start_message(message: types.Message):
               ' видео по ссылке (до 50MB), а если после ссылки через пробел дописать audio, скачана'
               ' аудио дорожка\n[💲 USD - EUR 💲] - Курс валют USD, EUR, BTC, ETH')
     await bot.send_message(message.chat.id, origin, reply_markup=(await commands())[0])
-    try:
-        url = 'https://skyteach.ru/wp-content/cache/thumb/d7/81a695a40a5dfd7_730x420.jpg'
-        await bot.send_photo(message.chat.id, photo=url)
-    except Exception as error:
-        logger.info(error)
-        if str(error).find('Error code: 400'):
-            img_file = open(f'vacancies/job.jpg', 'rb')
-            await bot.send_document(message.chat.id, img_file)
+    img_file = open(f'vacancies/job.jpg', 'rb')
+    await bot.send_photo(message.chat.id, photo=img_file)
 
 
 @dp.message_handler()
@@ -85,16 +79,8 @@ async def text_message(message: types.Message):
     elif message.text == '💲 USD - EUR 💲':
         await exchange(message, bot)
 
-    elif message.text == "🐷 Водички? 🐷":
-        try:
-            url_img = ("https://bestwine24.ru/image/cache/catalog/vodka"
-                       "/eef2e315f762519e75aba64a800b63e9-540x720.jpg")
-            await bot.send_photo(message.chat.id, photo=url_img)
-        except Exception as error:
-            logger.error(error)
-            if str(error).find('Error code: 400'):
-                img_file = open(f'vacancies/vodka.jpg', 'rb')
-                await bot.send_document(message.chat.id, img_file)
+    elif message.text == "🧜 Картинку? 🧚‍":
+        await link_image(message, bot)
 
     elif message.text == "✳️ read file ✳️":
         if message.chat.id in (USER_1, USER_2):
@@ -164,7 +150,7 @@ async def text_message(message: types.Message):
 
     elif [i for i in ['https://youtu.be/', 'https://www.youtu.be/', 'https://youtube.com/',
                       'https://www.youtube.com/'] if message.text.startswith(i)]:
-        await download_video(message, bot)
+        await download_video_audio(message, bot)
 
     elif message.text == "⛔️reboot⛔️":
         if message.chat.id == USER_1:
@@ -189,7 +175,6 @@ async def text_message(message: types.Message):
         fail = (f'*Не надо баловаться* 😡 *{message.chat.first_name}*\n\n😜 *И тебе того же:   '
                 f'{message.text}*')
         await bot.send_message(message.chat.id, fail, parse_mode='Markdown')
-
 
 if __name__ == '__main__':
     executor.start_polling(dp)

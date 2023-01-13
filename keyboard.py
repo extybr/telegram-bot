@@ -8,7 +8,7 @@ async def commands():
     button_2 = types.KeyboardButton('✔️ работа ✔️')
     button_3 = types.KeyboardButton('❌ stop ❌')
     button_4 = types.KeyboardButton('⚙️ мой id ⚙️')
-    button_5 = types.KeyboardButton('🐷 Водички? 🐷')
+    button_5 = types.KeyboardButton('🧜 Картинку? 🧚‍')
     button_6 = types.KeyboardButton('🔐 admin 🔐')
     markup.row(button_1, button_2, button_3)
     markup.row(button_4, button_5, button_6)

@@ -2,17 +2,17 @@ from loguru import logger
 from requests import get
 import platform
 from sys import version
-import json
+from json import dumps
 from os import getlogin
 from config import *
 
 
 async def get_system_info(bot):
-    """ Информация о системе пк """
+    """ Информация о системе сервера """
     try:
         ip = get('http://ip.42.pl/raw').text
-        req = get(url=f'http://ip-api.com/json/{ip}').json()
-        full = json.dumps(req, indent=4)
+        information = get(url=f'http://ip-api.com/json/{ip}').json()
+        full = dumps(information, indent=4)
         uname = getlogin()
         system = platform.platform()
         info = 'OS info:\n{}\n\nPython version is {} {}'.format(platform.uname(), version,

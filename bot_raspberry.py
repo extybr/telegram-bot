@@ -13,7 +13,7 @@ from led_on_off import Led
 from screenshot import get_screenshot
 from shell import shell_cmd
 
-bot = Bot(TOKEN, )
+bot = Bot(TOKEN)
 dp = Dispatcher(bot)
 
 
@@ -26,7 +26,7 @@ async def start_message(message: types.Message):
               ' видео по ссылке (до 50MB), а если после ссылки через пробел дописать audio, скачана'
               ' аудио дорожка\n[💲 USD - EUR 💲] - Курс валют USD, EUR, BTC, ETH')
     await bot.send_message(message.chat.id, origin, reply_markup=(await commands())[0])
-    img_file = open(f'vacancies/job.jpg', 'rb')
+    img_file = open(f'img/job.jpg', 'rb')
     await bot.send_photo(message.chat.id, photo=img_file)
 
 
@@ -162,7 +162,7 @@ async def text_message(message: types.Message):
                 logger.error('Перезагрузка')
 
     elif message.text == "🖥О сервере":
-        await get_system_info(bot)
+        await get_system_info(message, bot)
 
     elif message.text == "✅Скриншот":
         await get_screenshot(message, bot)

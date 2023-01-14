@@ -43,5 +43,5 @@ async def link_image(message: types.Message, bot):
         logger.error('Сервер недоступен')
         await bot.send_message(message.chat.id, 'Сервер недоступен')
         if str(error).find('Error code: 400'):
-            img_file = open(f'vacancies/vodka.jpg', 'rb')
+            img_file = open(f'img/vodka.jpg', 'rb')
             await bot.send_photo(message.chat.id, photo=img_file)

@@ -1,6 +1,7 @@
 from loguru import logger
 from aiogram import types
 from time import sleep
+import os.path
 from config import *
 
 
@@ -39,3 +40,20 @@ async def send_vacancies(message: types.Message, bot) -> None:
                     sleep(5)
     NEW[f'{message.chat.id}'] = 0
     logger.info(f'{NEW}')
+
+
+async def send_less_vacancies(message: types.Message, bot) -> None:
+    """ Читает и передает локальный файл с вакансиями """
+    logger.info(f'{message.chat.id}: {message.text}')
+    count = 0
+    text = f'vacancies/{message.chat.id}.txt'
+    with open(text, 'r', encoding='utf-8') as txt:
+        count += int(txt.readline().strip()[20:])
+    if count > 10:
+        await send_vacancies(message, bot)
+    else:
+        with open(text, 'r', encoding='utf-8') as txt:
+            await bot.send_message(message.chat.id, f'{txt.read()}')
+    if os.path.exists(f'vacancies/{message.chat.id}.txt'):
+        download_file = open(f'vacancies/{message.chat.id}.txt', 'rb')
+        await bot.send_document(message.chat.id, download_file)

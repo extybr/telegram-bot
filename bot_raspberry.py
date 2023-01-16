@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-import os.path
 from aiogram import types, Dispatcher, Bot, executor
 from loguru import logger
 from config import *
 from hh_raspberry import search_job, region_id
-from read_vacancies import send_vacancies
+from read_vacancies import send_vacancies, send_less_vacancies
 from download_from_youtube import download_video_audio
 from keyboard import commands
 from exchange_rate import exchange, link_image
@@ -21,13 +20,27 @@ dp = Dispatcher(bot)
 async def start_message(message: types.Message):
     """ Функция вывода при старте: приветствие """
     logger.info(f'{message.chat.id}: Старт бота')
-    origin = ('Ну что готов к поиску работы? 😄 Жми кнопки-команды внизу\n[✔️ работа ✔️] - '
+    origin = ('Ну что готов к поиску работы? 😄\nЖми кнопки-команды внизу\n[✔️ работа ✔️] - '
               'Подробнее о поиске вакансий с сайта hh.ru\nКинув ссылку с youtube, вам будет скачано'
               ' видео по ссылке (до 50MB), а если после ссылки через пробел дописать audio, скачана'
-              ' аудио дорожка\n[💲 USD - EUR 💲] - Курс валют USD, EUR, BTC, ETH')
+              ' аудио дорожка\n[ /help ] - Подробная справка по командам')
     await bot.send_message(message.chat.id, origin, reply_markup=(await commands())[0])
     img_file = open(f'img/job.jpg', 'rb')
     await bot.send_photo(message.chat.id, photo=img_file)
+
+
+@dp.message_handler(commands=['help'])
+async def start_message(message: types.Message):
+    """ Функция вывода справки """
+    logger.info(f'{message.chat.id}: помощь')
+    origin = ('*[✔️ работа ✔️] - Подробнее о поиске вакансий с сайта hh.ru\n\n'
+              '[❌ stop ❌] - Остановка вывода вакансий по работе\n\n'
+              '[💲 USD - EUR 💲] - Курс валют USD, EUR, BTC, ETH\n\n'
+              '[⚙️ мой id ⚙️] - Информация пользователя телеграм\n\n'
+              '[🧜 Картинку? 🧚‍] - Вывод случайной картинки\n\n'
+              'Кинув ссылку с youtube, вам будет скачано видео по ссылке (до 50MB), а если после '
+              'ссылки через пробел дописать audio, скачана аудио дорожка*')
+    await bot.send_message(message.chat.id, origin, parse_mode='Markdown')
 
 
 @dp.message_handler()
@@ -50,7 +63,7 @@ async def text_message(message: types.Message):
                 break
             profession += ''.join(i + ' ')
         profession = profession.strip()
-        region = region_id(hr[0][1:])
+        region = await region_id(hr[0][1:])
         days = hr[-1]
         if region is None:
             await bot.send_message(message.chat.id, 'Вы неправильно ввели название города')
@@ -59,19 +72,8 @@ async def text_message(message: types.Message):
         else:
             if int(days) > 30:
                 days = '30'
-            search_job(message.chat.id, '', f'{profession}', f'{region}', f'{days}')
-            count = 0
-            text = f'vacancies/{message.chat.id}.txt'
-            with open(text, 'r', encoding='utf-8') as txt:
-                count += int(txt.readline().strip()[20:])
-            if count > 10:
-                await send_vacancies(message, bot)
-            else:
-                with open(text, 'r', encoding='utf-8') as txt:
-                    await bot.send_message(message.chat.id, f'{txt.read()}')
-            if os.path.exists(f'vacancies/{message.chat.id}.txt'):
-                download_file = open(f'vacancies/{message.chat.id}.txt', 'rb')
-                await bot.send_document(message.chat.id, download_file)
+            await search_job(message.chat.id, '', f'{profession}', f'{region}', f'{days}')
+            await send_less_vacancies(message, bot)
 
     elif message.text.startswith('#'):
         await shell_cmd(message, bot)
@@ -123,16 +125,8 @@ async def text_message(message: types.Message):
 
     elif message.text == "✔️ работа ✔️":
         if message.chat.id in (USER_5, USER_6):
-            search_job(message.chat.id, '', 'парикмахер', '1979', '30')
-            count = 0
-            text = f'vacancies/{message.chat.id}.txt'
-            with open(text, 'r', encoding='utf-8') as txt:
-                count += int(txt.readline().strip()[20:])
-            if count > 10:
-                await send_vacancies(message, bot)
-            else:
-                with open(text, 'r', encoding='utf-8') as txt:
-                    await bot.send_message(message.chat.id, f'{txt.read()}')
+            await search_job(message.chat.id, '', 'парикмахер', '1979', '30')
+            await send_less_vacancies(message, bot)
         else:
             example_search = ('*Введите данные для поиска в таком порядке*:\n\n`*`*[город] ['
                               'профессия с желаемой зарплатой] [число дней публикации объявлений '
@@ -153,7 +147,7 @@ async def text_message(message: types.Message):
         await download_video_audio(message, bot)
 
     elif message.text == "⛔️reboot⛔️":
-        if message.chat.id == USER_1:
+        if message.chat.id in (USER_1, USER_2):
             await bot.send_message(message.chat.id, 'Выключаю 😄')
             try:
                 from os import system
@@ -175,6 +169,14 @@ async def text_message(message: types.Message):
         fail = (f'*Не надо баловаться* 😡 *{message.chat.first_name}*\n\n😜 *И тебе того же:   '
                 f'{message.text}*')
         await bot.send_message(message.chat.id, fail, parse_mode='Markdown')
+        await message.delete()
+
+
+async def set_default_commands(dp):
+    await dp.bot.set_my_commands([
+        types.BotCommand("start", "Перезапустить бота"),
+        types.BotCommand("help", "Подробная справка по командам бота")
+    ])
 
 if __name__ == '__main__':
-    executor.start_polling(dp)
+    executor.start_polling(dp, on_startup=set_default_commands, skip_updates=True)

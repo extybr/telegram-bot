@@ -2,8 +2,8 @@ from requests import get
 from loguru import logger
 
 
-def search_job(telegram_id, telegram_role: str, telegram_profession: str, telegram_area: str,
-               telegram_period: str) -> None:
+async def search_job(telegram_id, telegram_role: str, telegram_profession: str, telegram_area: str,
+                     telegram_period: str) -> None:
     """  Парсер вакансий с сайта hh.ru """
     logger.info(f'Переданы параметры: {telegram_id}, {telegram_role}, {telegram_profession}, '
                 f'{telegram_area}, {telegram_period}')
@@ -72,7 +72,7 @@ def search_job(telegram_id, telegram_role: str, telegram_profession: str, telegr
         logger.error(f'Статус: проблемы с доступом в интернет\n{error}')
 
 
-def region_id(region: str) -> str:
+async def region_id(region: str) -> str:
     """ Получение id региона """
     logger.info(f'Запрос кода региона: {region}')
     try:

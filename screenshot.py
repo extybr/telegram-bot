@@ -7,6 +7,5 @@ async def get_screenshot(message: types.Message, bot):
     """ Функция делает скриншот и выводит пользователю """
     screen = ImageGrab.grab(bbox=None, all_screens=True)
     screen.save('screenshot.png')
-    img_file = open('screenshot.png', 'rb')
-    await bot.send_photo(message.chat.id, img_file)
+    await bot.send_photo(message.chat.id, photo=types.InputFile('screenshot.png'))
     remove('screenshot.png')

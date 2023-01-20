@@ -55,5 +55,4 @@ async def send_less_vacancies(message: types.Message, bot) -> None:
         with open(text, 'r', encoding='utf-8') as txt:
             await bot.send_message(message.chat.id, f'{txt.read()}')
     if os.path.exists(f'vacancies/{message.chat.id}.txt'):
-        download_file = open(f'vacancies/{message.chat.id}.txt', 'rb')
-        await bot.send_document(message.chat.id, download_file)
+        await bot.send_document(message.chat.id, types.InputFile(f'vacancies/{message.chat.id}.txt'))

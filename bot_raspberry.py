@@ -25,8 +25,7 @@ async def start_message(message: types.Message):
               ' видео по ссылке (до 50MB), а если после ссылки через пробел дописать audio, скачана'
               ' аудио дорожка\n[ /help ] - Подробная справка по командам')
     await bot.send_message(message.chat.id, origin, reply_markup=(await commands())[0])
-    img_file = open(f'img/job.jpg', 'rb')
-    await bot.send_photo(message.chat.id, photo=img_file)
+    await bot.send_photo(message.chat.id, photo=types.InputFile('img/job.jpg'))
 
 
 @dp.message_handler(commands=['help'])
@@ -142,8 +141,10 @@ async def text_message(message: types.Message):
         NEW[f'{message.chat.id}'] = 1
         logger.info(f'{NEW}')
 
-    elif [i for i in ['https://youtu.be/', 'https://www.youtu.be/', 'https://youtube.com/',
-                      'https://www.youtube.com/'] if message.text.startswith(i)]:
+    elif list(filter(lambda x: message.text.startswith(x), ['https://youtu.be/',
+                                                            'https://www.youtu.be/',
+                                                            'https://youtube.com/',
+                                                            'https://www.youtube.com/'])):
         await download_video_audio(message, bot)
 
     elif message.text == "⛔️reboot⛔️":

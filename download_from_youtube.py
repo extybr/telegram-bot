@@ -17,24 +17,24 @@ async def download_video_audio(message: types.Message, bot) -> None:
                                                     f'*С канала*: [{yt.author}]({yt.channel_url})',
                                    parse_mode='Markdown')
             stream = yt.streams.filter(progressive=True, file_extension='mp4')
-            title = f'{yt.title}'.replace('\\', '_').replace('/', '_').replace('|', '_')
-            stream.get_highest_resolution().download('youtube', f'{title}.mp4')
-            video = types.InputFile(os.path.join('youtube', f'{title}.mp4'))
+            title = ''.join(i for i in yt.title if i not in '/|\\') + '.mp4'
+            stream.get_highest_resolution().download('youtube', title)
+            video = types.InputFile(os.path.join('youtube', title))
             caption = f'*Готово. Ваше видео*: *{yt.title}*'
             await bot.send_video(user_id, video, caption=caption, parse_mode='Markdown')
-            os.remove(os.path.join('youtube', f'{title}.mp4'))
+            os.remove(os.path.join('youtube', title))
         elif len(audio_video_url) == 2 and audio_video_url[1] == 'audio':
             yt = YouTube(audio_video_url[0])
             await bot.send_message(message.chat.id, f'*Начинаю загрузку аудио дорожки*: *{yt.title}'
                                                     f'*\n*С канала*: [{yt.author}]({yt.channel_url})',
                                    parse_mode='Markdown')
             stream = yt.streams.filter(only_audio=True).first()
-            title = f'{yt.title}'.replace('\\', '_').replace('/', '_').replace('|', '_')
-            stream.download('youtube', f'{title}.mp3')
-            audio = types.InputFile(os.path.join('youtube', f'{title}.mp3'))
+            title = ''.join(i for i in yt.title if i not in '/|\\') + '.mp3'
+            stream.download('youtube', title)
+            audio = types.InputFile(os.path.join('youtube', title))
             caption = f'*Готово. Ваше аудио*: *{yt.title}*'
             await bot.send_audio(user_id, audio, caption=caption, parse_mode='Markdown')
-            os.remove(os.path.join('youtube', f'{title}.mp3'))
+            os.remove(os.path.join('youtube', title))
         else:
             await bot.send_message(message.chat.id, 'Некорректная ссылка!!!')
     except NetworkError as error:

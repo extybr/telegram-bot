@@ -72,7 +72,7 @@ async def search_job(telegram_id, telegram_role: str, telegram_profession: str, 
         logger.error(f'Статус: проблемы с доступом в интернет\n{error}')
 
 
-async def region_id(region: str) -> str:
+async def region_id(region: str) -> str or None:
     """ Получение id региона """
     logger.info(f'Запрос кода региона: {region}')
     try:

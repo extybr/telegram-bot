@@ -92,14 +92,14 @@ async def text_message(message: types.Message):
     elif message.text == "💡 led on 💡":
         if message.chat.id in (USER_1, USER_2):
             led = Led()
-            led.set_led_on_off(1)
+            led.set_led_on_off(True)
             await bot.send_message(message.chat.id, 'Включаю чайник 😄')
         else:
             await bot.send_message(message.chat.id, 'Вам запрещено включать чайник 😄')
     elif message.text == "💡 led off 💡":
         if message.chat.id in (USER_1, USER_2):
             led = Led()
-            led.set_led_on_off(0)
+            led.set_led_on_off(False)
             await bot.send_message(message.chat.id, 'Выключаю чайник 😄')
         else:
             await bot.send_message(message.chat.id, 'Вам запрещено выключать чайник 😄')

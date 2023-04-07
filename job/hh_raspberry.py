@@ -2,20 +2,22 @@ from requests import get
 from loguru import logger
 
 
-async def search_job(telegram_id, telegram_role: str, telegram_profession: str, telegram_area: str,
-                     telegram_period: str) -> None:
+async def search_job(telegram_id, telegram_role: str, telegram_profession: str,
+                     telegram_area: str, telegram_period: str) -> None:
     """  Парсер вакансий с сайта hh.ru """
-    logger.info(f'Переданы параметры: {telegram_id}, {telegram_role}, {telegram_profession}, '
-                f'{telegram_area}, {telegram_period}')
+    logger.info(f'Переданы параметры: {telegram_id}, {telegram_role}, '
+                f'{telegram_profession}, {telegram_area}, {telegram_period}')
     try:
-        professional_role = f'&professional_role={telegram_role}' if len(telegram_role) > 1 else ''
-        text_profession = f'&text={telegram_profession}'  # ключевое слово для поиска
-        area = telegram_area  # регион
+        professional_role = (f'&professional_role={telegram_role}'
+                             if len(telegram_role) > 1 else '')
+        text_profession = f'&text={telegram_profession}'
+        area = telegram_area
         publication_time = 'order_by=publication_time&'
-        period = telegram_period  # период поиска
-        url = (f'https://api.hh.ru/vacancies?clusters=true&st=searchVacancy&enable_snippets=true&'
-               f'{publication_time}period={period}&only_with_salary=false{professional_role}'
-               f'{text_profession}&page=0&per_page=100&area={area}&responses_count_enabled=true')
+        period = telegram_period
+        url = (f'https://api.hh.ru/vacancies?clusters=true&st=searchVacancy&'
+               f'enable_snippets=true&{publication_time}period={period}&'
+               f'only_with_salary=false{professional_role}{text_profession}&'
+               f'page=0&per_page=100&area={area}&responses_count_enabled=true')
 
         headers = {
             'Host': 'api.hh.ru',
@@ -40,7 +42,9 @@ async def search_job(telegram_id, telegram_role: str, telegram_profession: str, 
             types = index['type']['name']
             date = index['published_at'][:10]
             address = index['area']['name']
-            schedule = index['schedule']['name']
+            schedule = 'x'
+            if index['schedule']:
+                schedule = index['schedule']['name'].lower()
             if index['address']:
                 address = index['address']['raw']
             salary = index['salary']
@@ -55,17 +59,24 @@ async def search_job(telegram_id, telegram_role: str, telegram_profession: str, 
                         from_salary = '😜'
                     if not isinstance(to_salary, int):
                         to_salary = '🚀'
-                    output = (f'  {company}  '.center(50, '*') + f'\n\n🚮   Профессия: {name}\n😍   '
-                              f'Зарплата: {from_salary} - {to_salary}\n⚜   Ссылка: {link}\n🐯   '
-                              f'/{types}/   -🌼-   дата публикации: {date}   -🌻-   график работы: '
-                              f'{schedule.lower()}\n🚘   Адрес: {address}\n')
+                    output = (f'  {company}  '.center(50, '*') + f'\n\n'
+                              f'🚮   Профессия: {name}\n'
+                              f'😍   Зарплата: {from_salary} - {to_salary}\n'
+                              f'⚜   Ссылка: {link}\n🐯   /{types}/   -🌼-   '
+                              f'дата публикации: {date}   -🌻-   график работы: '
+                              f'{schedule.lower()}\n'
+                              f'🚘   Адрес: {address}\n')
                     text.write(output.center(50, '*') + '\n')
                 else:
-                    output = (f'  {company}  '.center(50, '*') + f'\n\n🚮   Профессия: {name}\n😍'
-                              f'   Зарплата: не указана\n⚜   Ссылка: {link}\n🐯   /{types}/'
-                              f'   -🌼-   дата публикации: {date}   -🌻-   график работы: '
-                              f'{schedule.lower()}\n🚦   Количество откликов для вакансии: '
-                              f'\n🚘   Адрес: {address}\n')
+                    output = (f'  {company}  '.center(50, '*') + f'\n\n'
+                              f'🚮   Профессия: {name}\n'
+                              f'😍   Зарплата: не указана\n'
+                              f'⚜   Ссылка: {link}\n'
+                              f'🐯   /{types}/   -🌼-   дата публикации: '
+                              f'{date}   -🌻-   график работы: '
+                              f'{schedule.lower()}\n'
+                              f'🚦   Количество откликов для вакансии: \n'
+                              f'🚘   Адрес: {address}\n')
                     text.write(output.center(50, '*') + '\n')
                 text.close()
     except OSError as error:

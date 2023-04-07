@@ -1,11 +1,12 @@
 from shlex import quote, split
 from subprocess import run
-from aiogram import types
+from aiogram.types import Message
 from loguru import logger
 
 
-async def shell_cmd(message: types.Message, bot):
-    """ Выводит пользователю результат команды терминала (ограничение по длине вывода) """
+async def shell_cmd(message: Message, bot):
+    """ Выводит пользователю результат команды терминала
+    (ограничение по длине вывода) """
     command = message.text[1:]
     args = command.split(' ')
     args.pop(0)

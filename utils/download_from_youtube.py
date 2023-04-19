@@ -5,6 +5,18 @@ from aiogram import Bot
 from aiogram.types import Message, FSInputFile
 
 
+def filename(opts: dict, audio_video: str) -> Path:
+    try:
+        with yt_dlp.YoutubeDL(opts) as yd:
+            yd.download(audio_video)
+        for i in Path().iterdir():
+            if i.is_file():
+                if audio_video[-11:] in str(i):
+                    return i
+    except Exception as error:
+        logger.error(error)
+
+
 async def download_video_audio(message: Message, bot: Bot) -> None:
     """ Скачивает аудио/видео с youtube """
     logger.info(f'{message.chat.id}: {message.text}')
@@ -37,46 +49,38 @@ async def download_video_audio(message: Message, bot: Bot) -> None:
                     f"<b>кол-во комментариев:</b>  {comment_count}\n"
                     f"<b>превью max:</b>  {thumbnail}\n"
                     f"<b>превью jpg:</b>  {fg}\n")
+
+            filetype = 'video'
             if len(audio_video_url) == 1:
                 txt = (f'<b>Начинаю загрузку видео\nВнимание: если размер '
                        f'файла превышает 50МB, то телеграм его не пошлет</b>\n'
                        f'{data}')
                 await bot.send_message(message.chat.id, txt, parse_mode='HTML')
-                title = extract['fulltitle']
-                with yt_dlp.YoutubeDL() as yd:
-                    yd.download(audio_video_url[0])
-                for i in Path().iterdir():
-                    if str(i).startswith(title):
-                        ext = str(i)[-4:] if str(i)[-4] == '.' else str(i)[-5:]
-                        file = i.rename(title + ext)
-                        video = FSInputFile(file)
-                        caption = f'<b>Готово. Ваше видео: {title}</b>'
-                        await bot.send_video(user_id, video, caption=caption,
-                                             parse_mode='HTML')
-                        file.unlink()
+
             elif len(audio_video_url) == 2 and audio_video_url[1] == 'audio':
-                txt = f'Начинаю загрузку аудио дорожки: {data}'
+                txt = f'<b>Начинаю загрузку аудио дорожки:</b> {data}'
                 await bot.send_message(message.chat.id, txt, parse_mode='HTML')
-                ydl_opts = {
-                    'format': 'm4a/bestaudio/best'}
-                with yt_dlp.YoutubeDL(ydl_opts) as yd:
-                    yd.download(audio_video_url[0])
-                title = extract['fulltitle']
-                for i in Path().iterdir():
-                    if str(i).startswith(title):
-                        ext = str(i)[-4:] if str(i)[-4] == '.' else str(i)[-5:]
-                        file = i.rename(title + ext)
-                        audio = FSInputFile(file)
-                        caption = f'<b>Готово. Ваше аудио: {title}</b>'
-                        await bot.send_audio(user_id, audio, caption=caption,
-                                             parse_mode='HTML')
-                        file.unlink()
-            else:
-                await bot.send_message(message.chat.id, 'Некорректная ссылка!!!')
+                ydl_opts = {'format': 'm4a/bestaudio/best'}
+                filetype = 'audio'
+
+            file = filename(ydl_opts, audio_video_url[0])
+            caption = f'<b>Готово. Ваше {filetype}: {fulltitle}</b>'
+
+            if filetype == 'video':
+                await bot.send_video(user_id, FSInputFile(file),
+                                     caption=caption, parse_mode='HTML')
+            elif filetype == 'audio':
+                await bot.send_audio(user_id, FSInputFile(file),
+                                     caption=caption, parse_mode='HTML')
+            # file.unlink()
+
     except Exception as error:
         text = '<b>Ограничение!!! Лимит на закачку ботом 50MB.</b>'
         await bot.send_message(message.chat.id, text, parse_mode='HTML')
-        for i in Path().iterdir():
-            if str(i).startswith(fulltitle):
-                i.unlink()
         logger.error(error)
+    finally:
+        for i in Path().iterdir():
+            if i.is_file():
+                for e in ['.webm', '.mp4', '.m4a']:
+                    if str(i).endswith(e):
+                        i.unlink()

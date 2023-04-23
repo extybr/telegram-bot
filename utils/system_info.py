@@ -17,8 +17,8 @@ async def get_system_info(message: Message, bot: Bot):
         name = f'{uname()}'[13:-1]
         info = (f"<b>Пользователь: {getlogin()}\nIP: {ip}\nОС: {platform()}\n"
                 f"OS info: {name}\nPython version is {version}\n{full}</b>")
-        await bot.send_message(message.chat.id, info, parse_mode="HTML")
+        await bot.send_message(message.from_user.id, info, parse_mode="HTML")
     except Exception as error:
-        await bot.send_message(message.chat.id,
+        await bot.send_message(message.from_user.id,
                                'Информационный сервер недоступен')
         logger.error(error)

@@ -4,14 +4,37 @@ from time import sleep
 from aiogram import Bot
 from aiogram.types import Message, FSInputFile
 from config_files.config import Config, load_config
+from keyboards.inline import process_beginning_command, FLAG
 
-FLAG = dict()
+
+async def send_less_vacancies(message: Message, bot: Bot) -> None:
+    """ Читает и передает локальный файл с вакансиями """
+    logger.info(f'{message.chat.id}: {message.text}')
+    if message.chat.id not in FLAG:
+        FLAG[message.chat.id] = {'flag': 0, 'page': 1, 'links': []}
+    count = 0
+    text = f'vacancies/{message.chat.id}.txt'
+    with open(text, 'r', encoding='utf-8') as txt:
+        count += int(txt.readline().strip()[20:])
+    if count > 10:
+        await send_vacancies(message, bot)
+    else:
+        with open(text, 'r', encoding='utf-8') as txt:
+            await bot.send_message(message.chat.id, f'{txt.read()}')
+        await create_links(message)
+        if len(FLAG[message.chat.id]['links']) > 0:
+            await process_beginning_command(message)
+    if exists(f'vacancies/{message.chat.id}.txt'):
+        await bot.send_document(message.chat.id,
+                                FSInputFile(f'vacancies/{message.chat.id}.txt'))
 
 
 async def send_vacancies(message: Message, bot: Bot) -> None:
     """ Читает локальный файл с вакансиями """
     logger.info(f'{message.chat.id}: {message.text}')
     config: Config = load_config('config_files/.env')
+    if message.chat.id not in FLAG:
+        FLAG[message.chat.id] = {'flag': 0, 'page': 1, 'links': []}
     text = f'vacancies/{message.chat.id}.txt'
     count = 0
     count_local = 0
@@ -26,11 +49,11 @@ async def send_vacancies(message: Message, bot: Bot) -> None:
     else:
         await bot.send_message(message.chat.id, f'Число вакансий:  {count_local}')
     sleep(3)
-    FLAG[f'{message.chat.id}'] = 0
+    FLAG[message.chat.id]['flag'] = 0
     if count > 0:
         with open(text, 'r', encoding='utf-8') as txt:
             for line in txt.readlines():
-                if FLAG[f'{message.chat.id}'] == 1:
+                if FLAG[message.chat.id]['flag'] == 1:
                     await bot.send_message(message.chat.id,
                                            'Принудительная остановка вывода '
                                            'вакансий')
@@ -43,22 +66,20 @@ async def send_vacancies(message: Message, bot: Bot) -> None:
                     await bot.send_message(message.chat.id, line.strip())
                 elif line.startswith('🚘'):
                     sleep(5)
-    FLAG[f'{message.chat.id}'] = 0
+    FLAG[message.chat.id]['flag'] = 0
     logger.info(f'{FLAG}')
+    await create_links(message)
+    if len(FLAG[message.chat.id]['links']) > 0:
+        await process_beginning_command(message)
 
 
-async def send_less_vacancies(message: Message, bot) -> None:
-    """ Читает и передает локальный файл с вакансиями """
+async def create_links(message: Message):
     logger.info(f'{message.chat.id}: {message.text}')
-    count = 0
     text = f'vacancies/{message.chat.id}.txt'
+    job_lnk = []
     with open(text, 'r', encoding='utf-8') as txt:
-        count += int(txt.readline().strip()[20:])
-    if count > 10:
-        await send_vacancies(message, bot)
-    else:
-        with open(text, 'r', encoding='utf-8') as txt:
-            await bot.send_message(message.chat.id, f'{txt.read()}')
-    if exists(f'vacancies/{message.chat.id}.txt'):
-        await bot.send_document(message.chat.id,
-                                FSInputFile(f'vacancies/{message.chat.id}.txt'))
+        for line in txt.readlines():
+            if line.find('https://') != -1:
+                job_lnk.append(f'{line[12:].strip()}')
+        FLAG[message.chat.id]['links'] = job_lnk
+    logger.info(f'{FLAG}')

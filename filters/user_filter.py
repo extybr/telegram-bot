@@ -1,6 +1,6 @@
 from aiogram import Bot, Dispatcher, Router, F
-from aiogram.types import Message, FSInputFile
-from aiogram.filters import Command, CommandStart
+from aiogram.types import Message, FSInputFile, CallbackQuery
+from aiogram.filters import Command, CommandStart, Text
 from loguru import logger
 from job.hh_raspberry import search_job, region_id
 from job.read_vacancies import send_vacancies, send_less_vacancies
@@ -8,16 +8,17 @@ from utils.download_from_youtube import download_video_audio
 from utils.exchange_rate import exchange
 from utils.random_image import get_link
 from utils.system_info import get_system_info
-# from utils.led_on_off import Led
+from utils.led_on_off import Led
 from utils.screenshot import get_screenshot
 from utils.shell import shell_cmd
 from keyboards.keyboard import commands
 from config_files.config import Config, load_config
 from job.read_vacancies import FLAG
+from keyboards.inline import create_pagination_keyboard
 
 config: Config = load_config('config_files/.env')
-admin = config.tg_bot.admin_ids
-user = config.tg_bot.user_ids
+admin: config = config.tg_bot.admin_ids
+user: config = config.tg_bot.user_ids
 bot: Bot = Bot(token=config.tg_bot.token)
 dp: Dispatcher = Dispatcher()
 router: Router = Router()
@@ -56,6 +57,45 @@ async def start_message(message: Message):
 async def text_message(message: Message):
     """ Удаление спама (фото, видео, аудио, стикеров, анимации) """
     await message.delete()
+
+
+@router.callback_query(Text(text='>>'))
+async def process_forward_press(callback: CallbackQuery):
+    logger.info(f'{callback.message.text}')
+    if (callback.from_user.id in FLAG) and (
+            FLAG[callback.from_user.id]["page"] < len(
+            FLAG[callback.from_user.id]['links'])):
+        FLAG[callback.from_user.id]["page"] += 1
+        text = (FLAG[callback.from_user.id]['links']
+        [FLAG[callback.from_user.id]["page"] - 1])
+        if callback.message.text == text:
+            FLAG[callback.from_user.id]["page"] += 1
+            text = (FLAG[callback.from_user.id]['links']
+            [FLAG[callback.from_user.id]["page"] - 1])
+        await callback.message.edit_text(
+            text=text,
+            reply_markup=create_pagination_keyboard(
+                FLAG[callback.from_user.id]["page"],
+                len(FLAG[callback.from_user.id]['links'])))
+
+
+@router.callback_query(Text(text='<<'))
+async def process_backward_press(callback: CallbackQuery):
+    logger.info(f'{callback.message.text}')
+    if (callback.from_user.id in FLAG) and (
+            FLAG[callback.from_user.id]["page"] > 1):
+        FLAG[callback.from_user.id]["page"] -= 1
+        text = (FLAG[callback.from_user.id]['links']
+        [FLAG[callback.from_user.id]["page"] - 1])
+        if callback.message.text == text:
+            FLAG[callback.from_user.id]["page"] -= 1
+            text = (FLAG[callback.from_user.id]['links']
+            [FLAG[callback.from_user.id]["page"] - 1])
+        await callback.message.edit_text(
+            text=text,
+            reply_markup=create_pagination_keyboard(
+                FLAG[callback.from_user.id]["page"],
+                len(FLAG[callback.from_user.id]['links'])))
 
 
 @router.message(F.text)
@@ -122,12 +162,16 @@ async def text_message(message: Message):
             led.set_led_on_off(False)
             await bot.send_message(message.chat.id, 'Выключаю чайник 😄')
         else:
-            await bot.send_message(message.chat.id,
+            await bot.send_message(message.from_user.id,
                                    'Вам запрещено выключать чайник 😄')
 
     elif message.text == "⚙️ мой id ⚙️":
-        user_information = (f'<b>id - {message.chat.id}\n'
-                            f'Имя - {message.from_user.full_name}\n'
+        ids = f'id - {message.chat.id}'
+        if message.from_user.id != message.chat.id:
+            ids = (f'chat_id = {message.chat.id},\n'
+                   f'user_id - {message.from_user.id}')
+        user_information = (f'<b>{ids}\n'
+                            f'Имя - {message.chat.full_name}\n'
                             f'Пользователь - @{message.chat.username}</b>')
         await bot.send_message(message.chat.id, user_information,
                                parse_mode='HTML')
@@ -139,11 +183,12 @@ async def text_message(message: Message):
         else:
             await bot.send_message(message.chat.id,
                                    'Эта кнопка только для администратора 😄')
-            alert = (f"Кто-то пытался задать команду: {message.text}\n\nuser id: "
-                     f"{message.from_user.id}\n"
-                     f"first name: {message.from_user.first_name}\nlast name: "
-                     f"{message.from_user.last_name}"
-                     f"\nusername: @{message.from_user.username}")
+            alert = (f"Кто-то пытался задать команду: {message.text}\n\n"
+                     f"user id: {message.chat.id}\n"
+                     f"first name: {message.from_user.first_name}\n"
+                     f"last name: {message.from_user.last_name}\n"
+                     f"fullname: {message.chat.full_name}\n"
+                     f"username: @{message.chat.username}")
             await bot.send_message(admin[0], alert)
 
     elif message.text == "✔️ работа ✔️":
@@ -166,8 +211,8 @@ async def text_message(message: Message):
                                    parse_mode='Markdown')
 
     elif message.text == '❌ stop ❌':
-        FLAG[f'{message.chat.id}'] = 1
-        logger.info(f'{FLAG}')
+        if message.chat.id in FLAG:
+            FLAG[message.chat.id]['flag'] = 1
 
     elif list(filter(lambda x: message.text.startswith(x), [
         'https://youtu.be/',

@@ -14,6 +14,6 @@ async def shell_cmd(message: Message, bot):
     full_command = split(f"{command} {''.join(clean)}")
     try:
         result = run(full_command, capture_output=True).stdout.decode()
-        await bot.send_message(message.chat.id, f"{result}")
+        await bot.send_message(message.from_user.id, f"{result}")
     except Exception as error:
         logger.error(error)

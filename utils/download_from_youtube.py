@@ -19,8 +19,8 @@ def filename(opts: dict, audio_video: str) -> Path:
 
 async def download_video_audio(message: Message, bot: Bot) -> None:
     """ Скачивает аудио/видео с youtube """
-    logger.info(f'{message.chat.id}: {message.text}')
-    user_id = message.from_user.id
+    logger.info(f'{message.from_user.id}: {message.text}')
+    user_id = message.chat.id
     try:
         audio_video_url = message.text.split(' ')
         ydl_opts = {}
@@ -55,11 +55,11 @@ async def download_video_audio(message: Message, bot: Bot) -> None:
                 txt = (f'<b>Начинаю загрузку видео\nВнимание: если размер '
                        f'файла превышает 50МB, то телеграм его не пошлет</b>\n'
                        f'{data}')
-                await bot.send_message(message.chat.id, txt, parse_mode='HTML')
+                await bot.send_message(user_id, txt, parse_mode='HTML')
 
             elif len(audio_video_url) == 2 and audio_video_url[1] == 'audio':
                 txt = f'<b>Начинаю загрузку аудио дорожки:</b> {data}'
-                await bot.send_message(message.chat.id, txt, parse_mode='HTML')
+                await bot.send_message(user_id, txt, parse_mode='HTML')
                 ydl_opts = {'format': 'm4a/bestaudio/best'}
                 filetype = 'audio'
 
@@ -76,7 +76,7 @@ async def download_video_audio(message: Message, bot: Bot) -> None:
 
     except Exception as error:
         text = '<b>Ограничение!!! Лимит на закачку ботом 50MB.</b>'
-        await bot.send_message(message.chat.id, text, parse_mode='HTML')
+        await bot.send_message(user_id, text, parse_mode='HTML')
         logger.error(error)
     finally:
         for i in Path().iterdir():

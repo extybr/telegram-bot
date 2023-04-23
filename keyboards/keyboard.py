@@ -1,12 +1,13 @@
+from aiogram import Bot
 from aiogram.types import BotCommand, ReplyKeyboardMarkup, KeyboardButton
 from aiogram.utils.keyboard import ReplyKeyboardBuilder
-from aiogram import Bot
 
 
 async def set_default_commands(bot: Bot) -> None:
     """ Дефолтные команды основного меню """
     menu = [BotCommand(command="start", description="Перезапустить бота"),
-            BotCommand(command="help", description="Подробная справка по командам бота")]
+            BotCommand(command="help",
+                       description="Подробная справка по командам бота")]
     await bot.set_my_commands(menu)
 
 

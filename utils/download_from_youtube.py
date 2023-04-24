@@ -27,17 +27,18 @@ async def download_video_audio(message: Message, bot: Bot) -> None:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(audio_video_url[0], download=False)
             extract = ydl.sanitize_info(info)
-            channel = extract['channel']
-            channel_follower_count = extract['channel_follower_count']
-            channel_url = extract['channel_url']
-            fulltitle = extract['fulltitle']
-            upload_date = extract['upload_date']
-            duration_string = extract['duration_string']
-            view_count = extract['view_count']
-            like_count = extract['like_count']
-            comment_count = extract['comment_count']
-            thumbnail = extract['thumbnail']
-            fn = [i['url'] for i in extract['thumbnails'] if i['preference'] == -1]
+            channel = extract.get('channel', {})
+            channel_follower_count = extract.get('channel_follower_count', {})
+            channel_url = extract.get('channel_url', {})
+            fulltitle = extract.get('fulltitle', {})
+            upload_date = extract.get('upload_date', {})
+            duration_string = extract.get('duration_string', {})
+            view_count = extract.get('view_count', {})
+            like_count = extract.get('like_count', {})
+            comment_count = extract.get('comment_count', {})
+            thumbnail = extract.get('thumbnail', {})
+            fn = [i.get('url', {}) for i in extract.get('thumbnails', {})
+                  if i.get('preference', {}) == -1]
             fg = str(fn)[2:-2]
             data = (f"\n<b>канал:</b>  {channel}\n<b>кол-во подписок на канал:"
                     f"</b>  {channel_follower_count}\n<b>url канала:</b> "

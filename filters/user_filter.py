@@ -13,8 +13,7 @@ from utils.screenshot import get_screenshot
 from utils.shell import shell_cmd
 from keyboards.keyboard import commands
 from config_files.config import Config, load_config
-from job.read_vacancies import FLAG
-from keyboards.inline import create_pagination_keyboard
+from keyboards.inline import create_pagination_keyboard, FLAG
 
 config: Config = load_config('config_files/.env')
 admin: config = config.tg_bot.admin_ids
@@ -57,6 +56,20 @@ async def start_message(message: Message):
 async def text_message(message: Message):
     """ Удаление спама (фото, видео, аудио, стикеров, анимации) """
     await message.delete()
+
+
+@router.callback_query(Text(endswith='   в начало   '))
+async def beginning_command(callback: CallbackQuery):
+    logger.info(f'{callback.message.text}')
+    if (callback.from_user.id in FLAG) and (
+            FLAG[callback.from_user.id]["page"] != 1):
+        FLAG[callback.from_user.id]["page"] = 1
+        text = FLAG[callback.from_user.id]['links'][0]
+        await callback.message.edit_text(
+            text=text,
+            reply_markup=create_pagination_keyboard(
+                FLAG[callback.from_user.id]["page"],
+                len(FLAG[callback.from_user.id]['links'])))
 
 
 @router.callback_query(Text(text='>>'))
@@ -183,13 +196,13 @@ async def text_message(message: Message):
         else:
             await bot.send_message(message.chat.id,
                                    'Эта кнопка только для администратора 😄')
-            alert = (f"Кто-то пытался задать команду: {message.text}\n\n"
+            alert = (f"<b>Кто-то пытался задать команду: {message.text}\n\n"
                      f"user id: {message.chat.id}\n"
                      f"first name: {message.from_user.first_name}\n"
                      f"last name: {message.from_user.last_name}\n"
                      f"fullname: {message.chat.full_name}\n"
-                     f"username: @{message.chat.username}")
-            await bot.send_message(admin[0], alert)
+                     f"username: @{message.chat.username}</b>")
+            await bot.send_message(admin[0], alert, parse_mode='HTML')
 
     elif message.text == "✔️ работа ✔️":
         if message.chat.id in user:

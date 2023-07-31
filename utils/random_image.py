@@ -27,7 +27,7 @@ async def get_link(message: Message, bot: Bot) -> None:
     try:
         api_scenery = "https://api.scenery.cx/get_image_info/{0}"
         link_scenery = "https://scenery.cx/images/{0}.jpg"
-        choice = randint(1, 174972)
+        choice = randint(1, 193591)
         api = get(api_scenery.format(choice)).text
         if api == "null":
             print(api)

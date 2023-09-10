@@ -55,5 +55,7 @@ async def get_link_scenery(message: Message, bot: Bot) -> None:
         link = link_scenery.format(choice)
         await bot.send_photo(message.chat.id, photo=link)
     except Exception:
-        logger.error(f'Сервер {_resource} недоступен')
-        await bot.send_message(message.chat.id, f'Сервер {_resource} недоступен')
+        logger.error(f'Низкая скорость доступа к серверу {_resource} ... попытка')
+        await bot.send_message(message.chat.id, f'Низкая скорость доступа к '
+                                                f'серверу {_resource} ... попытка')
+        await resource_link_availability(message, bot)

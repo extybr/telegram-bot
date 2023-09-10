@@ -6,7 +6,7 @@ from job.hh_raspberry import search_job, region_id
 from job.read_vacancies import send_vacancies, send_less_vacancies
 from utils.download_from_youtube import download_video_audio
 from utils.exchange_rate import exchange
-from utils.random_image import get_link
+from utils.random_image import resource_link_availability
 from utils.system_info import get_system_info
 from utils.led_on_off import Led
 from utils.screenshot import get_screenshot
@@ -153,7 +153,7 @@ async def text_message(message: Message):
         await exchange(message, bot)
 
     elif message.text == "🧜 Картинку? 🧚‍":
-        await get_link(message, bot)
+        await resource_link_availability(message, bot)
 
     elif message.text == "✳️ read file ✳️":
         if message.chat.id in admin:

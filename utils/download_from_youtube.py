@@ -24,6 +24,7 @@ async def download_video_audio(message: Message, bot: Bot) -> None:
     try:
         audio_video_url = message.text.split(' ')
         ydl_opts = {}
+        yt_link = ''
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(audio_video_url[0], download=False)
             extract = ydl.sanitize_info(info)
@@ -64,6 +65,12 @@ async def download_video_audio(message: Message, bot: Bot) -> None:
                 ydl_opts = {'format': 'm4a/bestaudio/best'}
                 filetype = 'audio'
 
+            for formats in extract["formats"]:
+                if formats.get('format_id') == '18':
+                    yt_link = formats.get('url')
+                if formats.get('format_id') == '22':
+                    yt_link = formats.get('url')
+
             file = filename(ydl_opts, audio_video_url[0])
             caption = f'<b>Готово. Ваше {filetype}: {fulltitle}</b>'
 
@@ -78,6 +85,9 @@ async def download_video_audio(message: Message, bot: Bot) -> None:
     except Exception as error:
         text = '<b>Ограничение!!! Лимит на закачку ботом 50MB.</b>'
         await bot.send_message(user_id, text, parse_mode='HTML')
+        if yt_link := f"<a href='{yt_link}'>прямая ссылка</a>":
+            if user_id in (000000000,):
+                await bot.send_message(user_id, yt_link, parse_mode='HTML')
         logger.error(error)
     finally:
         for i in Path().iterdir():

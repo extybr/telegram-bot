@@ -111,6 +111,14 @@ async def process_backward_press(callback: CallbackQuery):
                 len(FLAG[callback.from_user.id]['links'])))
 
 
+def get_command(link):
+    site = '${#address}'
+    cmd = (f"address=$(curl --max-time 3 -i -s https://{link}:8443/proxy.pac "
+           f"| grep 'location:' | cut -f2 -d ' '); if [ {site} -gt 0 ]; "
+           f"then echo $address; fi")
+    return cmd
+
+
 @router.message(F.text)
 async def text_message(message: Message):
     """
@@ -148,6 +156,19 @@ async def text_message(message: Message):
     elif message.text.startswith('#'):
         if message.chat.id in admin:
             await shell_cmd(message, bot)
+            
+    elif message.text.startswith('@@@'):
+        import subprocess
+        antizapret = {'first': 'p.thenewone.lol', 'second': 'antizapret.prostovpn.org'}
+        addr = antizapret['first']
+        result = subprocess.getoutput(get_command(addr))
+        if not result:
+            addr = antizapret['second']
+            result = subprocess.getoutput(get_command(addr))
+            if not result:
+                await bot.send_message(message.chat.id, "<b>FAIL</b>", parse_mode='HTML')
+        if result:
+            await bot.send_message(message.chat.id, f"`{result}`", parse_mode='Markdown')
 
     elif message.text == '💲 USD - EUR 💲':
         await exchange(message, bot)
